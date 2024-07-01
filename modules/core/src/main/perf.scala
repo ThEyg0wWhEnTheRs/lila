@@ -71,11 +71,10 @@ object perf:
       def value: String = key
       def id: PerfId    = keyIdMap(key)
 
-    given Render[PerfKey] = _.value
+    given Show[PerfKey] = _.value
 
     def apply(key: String): Option[PerfKey]            = Option.when(all.contains(key))(key)
     def apply(variant: Variant, speed: Speed): PerfKey = byVariant(variant) | standardBySpeed(speed)
-    def read(key: PerfKeyStr): Option[PerfKey]         = apply(key.value)
 
     def keyToId(key: PerfKey): PerfId = keyIdMap(key)
 
@@ -98,9 +97,6 @@ object perf:
       case Speed.Classical      => classical
       case Speed.Correspondence => correspondence
       case Speed.UltraBullet    => ultraBullet
-
-  opaque type PerfKeyStr = String
-  object PerfKeyStr extends OpaqueString[PerfKeyStr]
 
   opaque type PerfId = Int
   object PerfId extends OpaqueInt[PerfId]
@@ -171,7 +167,7 @@ object perf:
       case "racingKings"    => racingKings
       case "crazyhouse"     => crazyhouse
       case "puzzle"         => puzzle
-      // impossible because PerfKey can't be instanciated with arbitrary values
+      // impossible because PerfKey can't be instantiated with arbitrary values
       case key => sys.error(s"Unknown perf key: $key")
 
     def keyed(key: PerfKey): KeyedPerf = KeyedPerf(key, apply(key))

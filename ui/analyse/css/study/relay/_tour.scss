@@ -1,7 +1,8 @@
 $hover-bg: $m-primary_bg--mix-30;
 
 .relay-tour {
-  @extend %box-neat-force;
+  @extend %box-neat-force, %flex-column;
+  gap: 3em;
   background: $c-bg-box;
   &__side {
     @extend %flex-column;
@@ -35,7 +36,7 @@ $hover-bg: $m-primary_bg--mix-30;
       justify-content: center;
       background: $c-bg-box;
       gap: 1em;
-      padding: 1.5rem 0 2rem 0;
+      padding: 1.5rem 1em 2rem 1em;
       display: none;
       flex-flow: column;
       &::before {
@@ -43,6 +44,7 @@ $hover-bg: $m-primary_bg--mix-30;
         color: $c-font-dimmer;
       }
       strong {
+        @extend %break-word;
         font-size: 1.2em;
         color: $c-font-dim;
       }
@@ -130,6 +132,7 @@ $hover-bg: $m-primary_bg--mix-30;
     }
 
     h1 {
+      @extend %break-word;
       @include fluid-size('font-size', 14px, 32px);
       color: $c-brag;
     }
@@ -137,6 +140,7 @@ $hover-bg: $m-primary_bg--mix-30;
     &__content {
       @extend %flex-column;
       flex: 1;
+      min-width: 0; // somehow this prevents overflow when mselect is large
       gap: 1em;
       @include mq-at-least-col3 {
         gap: calc(var(---box-padding) / 3);
@@ -147,6 +151,7 @@ $hover-bg: $m-primary_bg--mix-30;
     &__selectors {
       @extend %flex-center;
       gap: 1em;
+      position: relative;
     }
 
     .setting {
@@ -161,8 +166,13 @@ $hover-bg: $m-primary_bg--mix-30;
   }
 
   &__mselect {
+    position: unset;
     flex: auto;
     @include fluid-size('font-size', 12px, 20px);
+    white-space: wrap;
+    &.mselect__active {
+      overflow: visible;
+    }
     .fullscreen-mask {
       display: block;
     }
@@ -178,11 +188,13 @@ $hover-bg: $m-primary_bg--mix-30;
   }
   &__round-select {
     &__name {
+      @extend %ellipsis;
       flex: 3 1 100%;
     }
     &__status {
       font-size: 1rem;
       margin-inline-end: 1ch;
+      white-space: nowrap;
     }
     &__label {
       .round-state {
@@ -202,6 +214,13 @@ $hover-bg: $m-primary_bg--mix-30;
       overflow-x: hidden;
       overflow-y: auto;
       max-height: 50vh;
+      @media (max-width: at-most($medium)) {
+        position: fixed;
+        top: 10vh;
+        left: 5vw !important;
+        right: 5vw !important;
+        min-width: unset;
+      }
     }
     tr {
       display: table-row;
@@ -238,8 +257,7 @@ $hover-bg: $m-primary_bg--mix-30;
   }
 
   &__nav {
-    @extend %flex-between;
-    margin: 2em var(---box-padding);
+    @extend %flex-between, %box-margin-horiz;
     gap: 1em;
     user-select: none;
   }
@@ -268,13 +286,46 @@ $hover-bg: $m-primary_bg--mix-30;
     }
   }
 
+  &__info {
+    @extend %box-neat, %flex-between, %box-margin-horiz;
+    gap: 1em;
+    background: $c-bg-zebra;
+    padding: 1em 2em;
+    > div {
+      @extend %flex-center-nowrap;
+      gap: 1em;
+    }
+    img {
+      height: 2em;
+    }
+  }
+
   &__markup {
+    @extend %box-margin-horiz;
     @include rendered-markdown(2em, 50vh);
-    margin: 3em var(---box-padding);
+  }
+  &__source {
+    @extend %box-margin-horiz;
+    font-style: italic;
+    @media (max-width: at-most($x-large)) {
+      display: none;
+    }
+    &:last-child {
+      margin-bottom: 3em;
+    }
+  }
+  &__share {
+    @extend %box-neat, %box-margin-horiz;
+    background: $c-bg-zebra;
+    padding: 3em var(---box-padding) 1em var(---box-padding);
+    h2 {
+      margin-bottom: 3rem;
+    }
   }
 
   &__leaderboard {
     width: auto;
+    overflow-x: auto;
     margin: 0 auto 1rem;
     thead {
       background: none;
@@ -390,7 +441,18 @@ $hover-bg: $m-primary_bg--mix-30;
   }
 }
 
+.relay-tour__stats {
+  .spinner {
+    margin: 10em auto;
+  }
+  canvas {
+    min-height: 50vh;
+    margin: 0 2em 0 1em;
+  }
+}
+
 .relay-tour__side {
+  overflow: hidden;
   &__header {
     position: relative;
   }
@@ -438,7 +500,7 @@ $hover-bg: $m-primary_bg--mix-30;
     max-height: 12em;
     overflow-y: auto;
     background: $c-bg-zebra;
-    z-index: z(mz-menu);
+    z-index: $z-mz-menu-4;
     width: 100%;
     border: $c-primary 2px solid;
   }

@@ -1,7 +1,6 @@
 package controllers
 
 import play.api.libs.json.*
-import views.*
 
 import lila.app.{ *, given }
 import lila.practice.JsonView.given
@@ -18,8 +17,8 @@ final class Practice(
 
   def index = Open:
     pageHit
-    Ok.pageAsync:
-      api.get(ctx.me).map { html.practice.index(_) }
+    Ok.async:
+      api.get(ctx.me).map { views.practice.index(_) }
     .map(_.noCache)
 
   def show(sectionId: String, studySlug: String, studyId: StudyId) = Open:
@@ -46,9 +45,9 @@ final class Practice(
           Redirect(routes.Practice.show(section.id, study.slug, study.id))
 
   private def showUserPractice(us: lila.practice.UserStudy)(using Context) =
-    Ok.pageAsync:
+    Ok.async:
       analysisJson(us).map: (analysisJson, studyJson) =>
-        html.practice
+        views.practice
           .show(
             us,
             lila.practice.JsonView.JsData(
@@ -72,10 +71,11 @@ final class Practice(
 
   private def analysisJson(us: UserStudy)(using Context): Fu[(JsObject, JsObject)] = us match
     case UserStudy(_, _, chapters, WithChapter(study, chapter), _) =>
-      env.study.jsonView(study, chapters, chapter, none, withMembers = false).map { studyJson =>
-        val initialFen = chapter.root.fen.some
-        val pov        = userAnalysisC.makePov(initialFen, chapter.setup.variant)
-        val baseData = env.round.jsonView
+      for
+        studyJson <- env.study.jsonView(study, chapters, chapter, none, withMembers = false)
+        initialFen = chapter.root.fen.some
+        pov        = userAnalysisC.makePov(initialFen, chapter.setup.variant)
+        baseData = env.round.jsonView
           .userAnalysisJson(
             pov,
             ctx.pref,
@@ -83,14 +83,14 @@ final class Practice(
             chapter.setup.orientation,
             owner = false
           )
-        val analysis = baseData ++ Json.obj(
+        analysis = baseData ++ Json.obj(
           "treeParts" -> partitionTreeJsonWriter.writes {
             lila.study.TreeBuilder(chapter.root, chapter.setup.variant)
           },
           "practiceGoal" -> lila.practice.PracticeGoal(chapter)
         )
-        (analysis, studyJson)
-      }
+        analysisJson <- env.analyse.externalEngine.withExternalEngines(analysis)
+      yield (analysisJson, studyJson)
 
   def complete(chapterId: StudyChapterId, nbMoves: Int) = Auth { ctx ?=> me ?=>
     api.progress.setNbMoves(me, chapterId, lila.practice.PracticeProgress.NbMoves(nbMoves)).inject(NoContent)
@@ -104,7 +104,7 @@ final class Practice(
     for
       struct <- api.structure.get
       form   <- api.config.form
-      page   <- renderPage(html.practice.config(struct, form))
+      page   <- renderPage(views.practice.config(struct, form))
     yield Ok(page)
   }
 
@@ -112,7 +112,7 @@ final class Practice(
     api.config.form.flatMap: form =>
       FormFuResult(form) { err =>
         renderAsync:
-          api.structure.get.map(html.practice.config(_, err))
+          api.structure.get.map(views.practice.config(_, err))
       } { text =>
         (~api.config.set(text).toOption >>
           env.mod.logApi.practiceConfig).andDo(api.structure.clear()).inject(Redirect(routes.Practice.config))

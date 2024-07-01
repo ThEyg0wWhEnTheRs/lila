@@ -61,3 +61,8 @@ package push:
 
 package oauth:
   case class TokenRevoke(id: String)
+
+trait PicfitUrl:
+  def thumbnail(id: lila.core.id.ImageId, width: Int, height: Int): String
+  def resize(id: lila.core.id.ImageId, size: Either[Int, Int]): String
+  def raw(id: lila.core.id.ImageId): String

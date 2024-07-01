@@ -1,10 +1,10 @@
-package views.html.mod
+package views.mod
 
 import play.api.data.Form
 import scala.util.chaining.*
 
-import lila.app.templating.Environment.{ *, given }
-import lila.ui.ScalatagsTemplate.{ *, given }
+import lila.app.UiEnv.{ *, given }
+
 import lila.evaluation.PlayerAssessment
 import lila.rating.PerfType
 import lila.core.chess.Rank
@@ -13,20 +13,16 @@ import lila.game.GameExt.*
 import lila.mod.GameMod
 import lila.mod.ui.ModUserTableUi.sortNoneTh
 
-object games:
-
-  def apply(
-      user: User,
-      filterForm: Form[GameMod.Filter],
-      games: Either[List[Pov], List[(Pov, Either[PlayerAssessment, PlayerAssessment.Basics])]],
-      arenas: Seq[TourEntry],
-      swisses: Seq[(lila.core.swiss.IdName, Rank)]
-  )(using PageContext) =
-    views.html.base.layout(
-      title = s"${user.username} games",
-      moreCss = cssTag("mod.games"),
-      modules = jsModule("mod.games")
-    ) {
+def games(
+    user: User,
+    filterForm: Form[GameMod.Filter],
+    games: Either[List[Pov], List[(Pov, Either[PlayerAssessment, PlayerAssessment.Basics])]],
+    arenas: Seq[TourEntry],
+    swisses: Seq[(lila.core.swiss.IdName, Rank)]
+)(using Context) =
+  Page(s"${user.username} games")
+    .css("mod.games")
+    .js(EsmInit("mod.games")):
       main(cls := "mod-games box")(
         boxTop(
           h1(userLink(user, params = "?mod"), " games"),
@@ -124,7 +120,7 @@ object games:
                         a(
                           dataIcon := Icon.Trophy,
                           href     := routes.Tournament.show(tourId).url,
-                          title    := tournamentIdToName(tourId)
+                          title    := views.tournament.ui.tournamentIdToName(tourId)
                         )
                       },
                       pov.game.swissId.map { swissId =>
@@ -170,7 +166,7 @@ object games:
                       case _ => frag(td, td)
                     ,
                     td(dataSort := pov.game.movedAt.toSeconds.toString)(
-                      a(href := routes.Round.watcher(pov.gameId, pov.color.name), cls := "glpt")(
+                      a(href := routes.Round.watcher(pov.gameId, pov.color), cls := "glpt")(
                         momentFromNowServerText(pov.game.movedAt)
                       )
                     )
@@ -180,4 +176,3 @@ object games:
           )
         )
       )
-    }

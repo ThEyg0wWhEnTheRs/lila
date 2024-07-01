@@ -35,12 +35,13 @@ final class Env(
     akka.stream.Materializer,
     lila.game.IdGenerator,
     play.api.Mode,
-    lila.core.i18n.Translator
+    lila.core.i18n.Translator,
+    lila.core.config.RateLimit
 ):
 
   private val colls = wire[ChallengeColls]
 
-  def version(challengeId: Challenge.Id): Fu[SocketVersion] =
+  def version(challengeId: ChallengeId): Fu[SocketVersion] =
     socket.rooms.ask[SocketVersion](challengeId.into(RoomId))(GetVersion.apply)
 
   private lazy val joiner = wire[ChallengeJoiner]
@@ -49,7 +50,7 @@ final class Env(
 
   lazy val api = wire[ChallengeApi]
 
-  private lazy val socket = wire[ChallengeSocket]
+  private val socket = wire[ChallengeSocket]
 
   lazy val granter = wire[ChallengeGranter]
 

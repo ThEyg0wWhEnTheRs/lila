@@ -26,9 +26,10 @@ final class Env(
 
   export net.{ domain, baseUrl, assetBaseUrlInternal }
 
-  given Mode                   = environment.mode
-  given translator: Translator = lila.i18n.Translator
-  given scheduler: Scheduler   = system.scheduler
+  given mode: Mode                 = environment.mode
+  given translator: Translator     = lila.i18n.Translator
+  given scheduler: Scheduler       = system.scheduler
+  given lila.core.config.RateLimit = net.rateLimit
 
   // wire all the lila modules in the right order
   val i18n: lila.i18n.Env.type          = lila.i18n.Env
@@ -61,10 +62,10 @@ final class Env(
   val tournament: lila.tournament.Env   = wire[lila.tournament.Env]
   val swiss: lila.swiss.Env             = wire[lila.swiss.Env]
   val mod: lila.mod.Env                 = wire[lila.mod.Env]
-  val forum: lila.forum.Env             = wire[lila.forum.Env]
-  val forumSearch: lila.forumSearch.Env = wire[lila.forumSearch.Env]
   val team: lila.team.Env               = wire[lila.team.Env]
   val teamSearch: lila.teamSearch.Env   = wire[lila.teamSearch.Env]
+  val forum: lila.forum.Env             = wire[lila.forum.Env]
+  val forumSearch: lila.forumSearch.Env = wire[lila.forumSearch.Env]
   val pool: lila.pool.Env               = wire[lila.pool.Env]
   val lobby: lila.lobby.Env             = wire[lila.lobby.Env]
   val setup: lila.setup.Env             = wire[lila.setup.Env]
@@ -81,6 +82,7 @@ final class Env(
   val challenge: lila.challenge.Env     = wire[lila.challenge.Env]
   val explorer: lila.explorer.Env       = wire[lila.explorer.Env]
   val fide: lila.fide.Env               = wire[lila.fide.Env]
+  val title: lila.title.Env             = wire[lila.title.Env]
   val study: lila.study.Env             = wire[lila.study.Env]
   val studySearch: lila.studySearch.Env = wire[lila.studySearch.Env]
   val learn: lila.learn.Env             = wire[lila.learn.Env]
@@ -121,9 +123,9 @@ final class Env(
 
   lila.common.Bus.subscribeFun("renderer"):
     case lila.tv.RenderFeaturedJs(game, promise) =>
-      promise.success(Html(views.html.game.mini.noCtx(Pov.naturalOrientation(game), tv = true)))
+      promise.success(Html(views.game.mini.noCtx(Pov.naturalOrientation(game), tv = true)))
     case lila.puzzle.DailyPuzzle.Render(puzzle, fen, lastMove, promise) =>
-      promise.success(Html(views.html.puzzle.bits.daily(puzzle, fen, lastMove)))
+      promise.success(Html(views.puzzle.bits.daily(puzzle, fen, lastMove)))
 
 end Env
 

@@ -4,7 +4,9 @@ import reactivemongo.api.bson.Macros.Annotations.Key
 import reactivemongo.api.bson.{ BSONDocument, BSONDocumentHandler, BSONDocumentReader }
 import reactivemongo.api.bson.collection.BSONCollection
 import play.api.i18n.Lang
+import play.api.libs.json.JsObject
 import _root_.chess.{ ByColor, PlayerTitle }
+import scalalib.model.Days
 
 import lila.core.perf.Perf
 import lila.core.rating.data.{ IntRating, IntRatingDiff }
@@ -13,7 +15,6 @@ import lila.core.userId.*
 import lila.core.email.*
 import lila.core.id.Flair
 import lila.core.rating.Glicko
-import play.api.libs.json.JsObject
 import lila.core.perf.KeyedPerf
 
 object user:
@@ -73,8 +74,6 @@ object user:
 
     def isPatron = plan.active
 
-    def mapPlan(f: Plan => Plan) = copy(plan = f(plan))
-
     def isBot = title.contains(PlayerTitle.BOT)
     def noBot = !isBot
 
@@ -112,8 +111,7 @@ object user:
       @Key("country") flag: Option[String] = None,
       location: Option[String] = None,
       bio: Option[String] = None,
-      firstName: Option[String] = None,
-      lastName: Option[String] = None,
+      realName: Option[String] = None,
       fideRating: Option[Int] = None,
       uscfRating: Option[Int] = None,
       ecfRating: Option[Int] = None,
@@ -122,10 +120,7 @@ object user:
       dsbRating: Option[Int] = None,
       links: Option[String] = None
   ):
-    def nonEmptyRealName =
-      List(ne(firstName), ne(lastName)).flatten match
-        case Nil   => none
-        case names => (names.mkString(" ")).some
+    def nonEmptyRealName = ne(realName)
 
     def nonEmptyLocation = ne(location)
 
@@ -134,9 +129,10 @@ object user:
     def isEmpty = completionPercent == 0
 
     def completionPercent: Int =
-      100 * List(flag, bio, firstName, lastName).count(_.isDefined) / 4
+      100 * List(flag, bio, realName).count(_.isDefined) / 4
 
     private def ne(str: Option[String]) = str.filter(_.nonEmpty)
+
   end Profile
 
   object Profile:
@@ -222,6 +218,7 @@ object user:
     def setPlan(user: User, plan: Option[Plan]): Funit
     def filterByEnabledPatrons(userIds: List[UserId]): Fu[Set[UserId]]
     def isCreatedSince(id: UserId, since: Instant): Fu[Boolean]
+    def accountAge(id: UserId): Fu[Days]
 
   trait LightUserApiMinimal:
     val async: LightUser.Getter
@@ -245,6 +242,7 @@ object user:
     case boost
     case engine
     case troll
+    case isolate
     case reportban
     case rankban
     case arenaban
@@ -265,6 +263,7 @@ object user:
       def boost: Boolean                   = hasMark(UserMark.boost)
       def engine: Boolean                  = hasMark(UserMark.engine)
       def troll: Boolean                   = hasMark(UserMark.troll)
+      def isolate: Boolean                 = hasMark(UserMark.isolate)
       def reportban: Boolean               = hasMark(UserMark.reportban)
       def rankban: Boolean                 = hasMark(UserMark.rankban)
       def prizeban: Boolean                = hasMark(UserMark.prizeban)
@@ -307,6 +306,7 @@ object user:
     given flairsOf: FlairGetMap
     val adminFlairs: Set[Flair]
     def formField(anyFlair: Boolean = false, asAdmin: Boolean = false): play.api.data.Mapping[Option[Flair]]
+    def find(name: String): Option[Flair]
 
   /* User who is currently logged in */
   opaque type Me = User
@@ -335,6 +335,7 @@ object user:
   trait FlagApi:
     val all: List[Flag]
     val nonCountries: List[Flag.Code]
+    def name(flag: Flag): Flag.Name
 
   type GameUser  = Option[WithPerf]
   type GameUsers = ByColor[GameUser]

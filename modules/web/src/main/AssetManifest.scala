@@ -13,7 +13,7 @@ case class AssetMaps(js: Map[String, SplitAsset], css: Map[String, String], modi
 
 final class AssetManifest(environment: Environment, net: NetConfig)(using ws: StandaloneWSClient)(using
     Executor
-):
+) extends lila.ui.AssetManifest:
   private var maps: AssetMaps = AssetMaps(Map.empty, Map.empty, java.time.Instant.MIN)
 
   private val filename = s"manifest.${if net.minifiedAssets then "prod" else "dev"}.json"
@@ -23,6 +23,8 @@ final class AssetManifest(environment: Environment, net: NetConfig)(using ws: St
   def css(key: String): Option[String]       = maps.css.get(key)
   def deps(keys: List[String]): List[String] = keys.flatMap { key => js(key).so(_.imports) }.distinct
   def lastUpdate: Instant                    = maps.modified
+
+  def jsName(key: String): String = js(key).fold(key)(_.name)
 
   def update(): Unit =
     if environment.mode.isProd || net.externalManifest then
@@ -37,7 +39,7 @@ final class AssetManifest(environment: Environment, net: NetConfig)(using ws: St
         then maps = readMaps(Json.parse(Files.newInputStream(pathname)))
       catch
         case e: Throwable =>
-          logger.error(s"Error reading $pathname", e)
+          logger.warn(s"Error reading $pathname")
 
   private val keyRe = """^(?!common\.)(\S+)\.([A-Z0-9]{8})\.(?:js|css)""".r
   private def keyOf(fullName: String): String =

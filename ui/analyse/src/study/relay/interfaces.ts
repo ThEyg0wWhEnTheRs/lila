@@ -6,6 +6,7 @@ export interface RelayData {
   isSubscribed?: boolean; // undefined if anon
   videoUrls?: [string, string];
   pinned?: { userId: string; name: string; image?: string };
+  lcc?: boolean;
 }
 
 export interface RelayGroup {
@@ -29,21 +30,33 @@ export interface RelayRound {
   startsAt?: number;
 }
 
+export interface RelayTourInfo {
+  format?: string;
+  tc?: string;
+  players?: string;
+}
+
+export type RelayTourDates = [number] | [number, number];
+
 export interface RelayTour {
   id: string;
   name: string;
   slug: string;
-  description: string;
+  description?: string;
+  info: RelayTourInfo;
   official?: boolean;
   markup?: string;
   image?: string;
   teamTable?: boolean;
   leaderboard?: boolean;
+  tier?: number;
+  dates?: RelayTourDates;
 }
 
 export interface RelaySync {
   ongoing: boolean;
   url?: string;
+  urls?: [{ url: string }];
   ids?: string;
   log: LogEvent[];
   delay?: number;

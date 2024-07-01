@@ -2,13 +2,14 @@ package lila.user
 
 import reactivemongo.api.bson.Macros.Annotations.Key
 import lila.core.user.Profile
+import lila.core.user.Flag
 
 object Profile:
 
   import lila.core.user.Profile.*
 
   extension (p: Profile)
-    def flagInfo = p.flag.flatMap(Flags.info)
+    def flagInfo: Option[Flag] = p.flag.flatMap(Flags.info)
 
     def officialRating: Option[OfficialRating] =
       import p.*
@@ -22,8 +23,7 @@ object Profile:
 
     def filterTroll(troll: Boolean): Profile = p.copy(
       bio = p.bio.ifFalse(troll),
-      firstName = p.firstName.ifFalse(troll),
-      lastName = p.lastName.ifFalse(troll),
+      realName = p.realName.ifFalse(troll),
       location = p.location.ifFalse(troll),
       links = p.links.ifFalse(troll)
     )

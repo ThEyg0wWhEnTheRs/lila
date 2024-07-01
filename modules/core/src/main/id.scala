@@ -26,6 +26,8 @@ object id:
   // Either a GameId or a GameFullId
   opaque type GameAnyId = String
   object GameAnyId extends OpaqueString[GameAnyId]:
+    given Conversion[GameId, GameAnyId]     = _.value
+    given Conversion[GameFullId, GameAnyId] = _.value
     extension (e: GameAnyId)
       def gameId: GameId                 = GameId.take(e)
       def fullId: Option[GameFullId]     = if e.length == GameFullId.size then Some(e) else None
@@ -82,3 +84,36 @@ object id:
 
   opaque type UblogPostId = String
   object UblogPostId extends OpaqueString[UblogPostId]
+
+  opaque type ReportId = String
+  object ReportId extends OpaqueString[ReportId]
+
+  opaque type ImageId = String
+  object ImageId extends OpaqueString[ImageId]
+
+  opaque type RelayTourId = String
+  object RelayTourId extends OpaqueString[RelayTourId]
+
+  opaque type ChallengeId = String
+  object ChallengeId extends OpaqueString[ChallengeId]
+
+  opaque type ClasId = String
+  object ClasId extends OpaqueString[ClasId]
+
+  opaque type ClasInviteId = String
+  object ClasInviteId extends OpaqueString[ClasInviteId]
+
+  opaque type StudentId = String
+  object StudentId extends OpaqueString[StudentId]
+
+  opaque type AppealId = String
+  object AppealId extends lila.core.userId.OpaqueUserId[AppealId]
+
+  opaque type CmsPageId = String
+  object CmsPageId extends OpaqueString[CmsPageId]
+
+  opaque type CmsPageKey = String
+  object CmsPageKey extends OpaqueString[CmsPageKey]
+
+  opaque type TitleRequestId = String
+  object TitleRequestId extends OpaqueString[TitleRequestId]

@@ -408,7 +408,7 @@ object Node:
     val empty: Shapes                                    = Nil
 
   case class Comment(id: Comment.Id, text: Comment.Text, by: Comment.Author):
-    def removeMeta = text.removeMeta.map { t => copy(text = t) }
+    def removeMeta = text.removeMeta.map(t => copy(text = t))
   object Comment:
     opaque type Id = String
     object Id extends OpaqueString[Id]:
@@ -497,10 +497,9 @@ object Node:
 
   val minimalNodeJsonWriter: Writes[Node] = makeNodeJsonWriter(alwaysChildren = false)
 
-  def nodeListJsonWriter(alwaysChildren: Boolean): Writes[List[Node]] =
+  private val nodeListJsonWriter: Writes[List[Node]] =
     Writes: list =>
-      val writer = if alwaysChildren then defaultNodeJsonWriter else minimalNodeJsonWriter
-      JsArray(list.map(writer.writes))
+      JsArray(list.map(defaultNodeJsonWriter.writes))
 
   def makeNodeJsonWriter(alwaysChildren: Boolean): Writes[Node] =
     Writes: node =>
@@ -529,29 +528,14 @@ object Node:
           .add("comp", comp)
           .add(
             "children",
-            if alwaysChildren || children.nonEmpty then
-              Some:
-                nodeListJsonWriter(true).writes(children.nodes)
-            else None
+            Option.when(alwaysChildren || children.nonEmpty):
+              nodeListJsonWriter.writes(children.nodes)
           )
           .add("forceVariation", forceVariation)
       catch
         case e: StackOverflowError =>
           e.printStackTrace()
           sys.error(s"### StackOverflowError ### in tree.makeNodeJsonWriter($alwaysChildren)")
-
-  def destString(dests: Map[Square, Bitboard]): String =
-    val sb    = java.lang.StringBuilder(80)
-    var first = true
-    dests.foreach: (orig, dests) =>
-      if first then first = false
-      else sb.append(" ")
-      sb.append(orig.asChar)
-      dests.foreach(d => sb.append(d.asChar))
-    sb.toString
-
-  given Writes[Map[Square, Bitboard]] = Writes: dests =>
-    JsString(destString(dests))
 
   val partitionTreeJsonWriter: Writes[Node] = Writes: node =>
     JsArray:
@@ -578,3 +562,25 @@ object Tree:
   ): JsValue =
     Node.partitionTreeJsonWriter.writes:
       TreeBuilder(game, analysis, initialFen, options, logChessError)
+
+  def makeMinimalJsonStringNew(
+      game: Game,
+      analysis: Option[Analysis],
+      initialFen: Fen.Full,
+      options: ExportOptions,
+      logChessError: TreeBuilder.LogChessError
+  ): JsValue =
+    NewRoot.minimalNodeJsonWriter.writes:
+      val x = NewTreeBuilder(game, analysis, initialFen, lila.tree.ExportOptions.default, logChessError)
+      x.size
+      x
+
+  def makePartitionTreeJsonNew(
+      game: Game,
+      analysis: Option[Analysis],
+      initialFen: Fen.Full,
+      options: ExportOptions,
+      logChessError: TreeBuilder.LogChessError
+  ): JsValue =
+    NewRoot.partitionTreeJsonWriter.writes:
+      NewTreeBuilder(game, analysis, initialFen, options, logChessError)

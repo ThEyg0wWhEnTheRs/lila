@@ -23,6 +23,8 @@ final class Env(
 
   val referrerRedirect = wire[ReferrerRedirect]
 
+  val github = wire[GitHub]
+
   private lazy val influxEvent = new InfluxEvent(
     ws = ws,
     endpoint = config.influxEventEndpoint,
@@ -61,11 +63,6 @@ final class Env(
       "apiExplorerGamesPerSecond",
       default = 300,
       text = "Opening explorer games per second".some
-    )
-    val pieceImageExternal = settingStore[Boolean](
-      "pieceImageExternal",
-      default = false,
-      text = "Use external piece images".some
     )
     val sitewideCoepCredentiallessHeader = settingStore[Boolean](
       "sitewideCoepCredentiallessHeader",

@@ -31,8 +31,8 @@ function getPosition(e: MouseEvent | TouchEvent): Coords | null {
   if (pos.pageX || pos.pageY) return { x: pos.pageX!, y: pos.pageY! };
   else if (pos.clientX || pos.clientY)
     return {
-      x: pos.clientX! + document.body.scrollLeft + document.documentElement!.scrollLeft,
-      y: pos.clientY! + document.body.scrollTop + document.documentElement!.scrollTop,
+      x: pos.clientX! + document.body.scrollLeft + document.documentElement.scrollLeft,
+      y: pos.clientY! + document.body.scrollTop + document.documentElement.scrollTop,
     };
   else return null;
 }
@@ -81,6 +81,10 @@ function view(opts: Opts, coords: Coords): VNode {
       !onMainline && action(licon.Checkmark, trans('makeMainLine'), () => ctrl.promote(opts.path, true)),
 
       action(licon.Trash, trans('deleteFromHere'), () => ctrl.deleteNode(opts.path)),
+
+      action(licon.PlusButton, trans('expandVariations'), () => ctrl.setAllCollapsed(opts.path, false)),
+
+      action(licon.MinusButton, trans('collapseVariations'), () => ctrl.setAllCollapsed(opts.path, true)),
 
       ...(ctrl.study ? studyView.contextMenu(ctrl.study, opts.path, node) : []),
 

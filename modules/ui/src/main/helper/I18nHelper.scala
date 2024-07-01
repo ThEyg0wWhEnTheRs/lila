@@ -4,9 +4,15 @@ import play.api.i18n.Lang
 import play.api.libs.json.JsObject
 
 import lila.ui.ScalatagsTemplate.*
-import lila.core.i18n.{ I18nKey, fixJavaLanguage, JsDump, Translator }
+import lila.core.i18n.{ LangList, I18nKey, fixJavaLanguage, JsDump, Translator }
 
-final class I18nHelper(jsDump: JsDump, translator: Translator, val ratingApi: lila.ui.RatingApi):
+trait I18nHelper:
+
+  protected val jsDump: JsDump
+  protected val translator: Translator
+  protected val ratingApi: lila.ui.RatingApi
+
+  val langList: LangList
 
   extension (pk: PerfKey)
     def perfIcon: Icon                                = ratingApi.toIcon(pk)
@@ -20,6 +26,8 @@ final class I18nHelper(jsDump: JsDump, translator: Translator, val ratingApi: li
 
   given ctxTrans(using ctx: Context): Translate = Translate(translator, ctx.lang)
   given transLang(using trans: Translate): Lang = trans.lang
+
+  def transDefault: Translate = translator.toDefault
 
   def transKey(key: I18nKey, args: Seq[Matchable] = Nil)(using t: Translate): Frag =
     translator.frag.literal(key, args, t.lang)

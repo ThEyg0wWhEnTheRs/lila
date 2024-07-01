@@ -1,6 +1,5 @@
 package lila.common
 
-import chess.Color
 import chess.format.Fen
 import play.api.data.Forms.*
 import play.api.data.format.Formats.*
@@ -11,6 +10,7 @@ import play.api.data.{ Field, Form as PlayForm, FormError, Mapping, validation a
 import java.lang
 import java.time.LocalDate
 import scala.util.Try
+import play.api.data.FieldMapping
 
 object Form:
 
@@ -50,6 +50,9 @@ object Form:
   def numberInDouble(choices: Options[Double]) =
     of[Double].verifying(mustBeOneOf(choices.map(_._1)), hasKey(choices, _))
 
+  def stringIn[A](choices: Seq[A])(key: A => String): Mapping[A] =
+    stringIn(choices.map(key).toSet).transform[A](str => choices.find(c => str == key(c)).get, key)
+
   def id[Id](size: Int, fixed: Option[Id])(exists: Id => Fu[Boolean])(using
       sr: StringRuntime[Id],
       rs: SameRuntime[String, Id]
@@ -78,15 +81,42 @@ object Form:
   val cleanText: Mapping[String]            = of(cleanTextFormatter)
   val cleanTextWithSymbols: Mapping[String] = of(cleanTextFormatterWithSymbols)
 
-  def cleanText(minLength: Int = 0, maxLength: Int = Int.MaxValue): Mapping[String] =
-    (minLength, maxLength) match
-      case (min, Int.MaxValue) => cleanText.verifying(Constraints.minLength(min))
-      case (0, max)            => cleanText.verifying(Constraints.maxLength(max))
-      case (min, max)          => cleanText.verifying(Constraints.minLength(min), Constraints.maxLength(max))
+  val nonEmptyOrSpace = V.Constraint[String]: t =>
+    if t.linesIterator.exists(_.stripLineEnd.exists(!_.isWhitespace)) then V.Valid
+    else V.Invalid(V.ValidationError("error.required"))
 
-  val cleanNonEmptyText: Mapping[String] = cleanText.verifying(Constraints.nonEmpty)
+  private def addLengthConstraints(m: Mapping[String], minLength: Int, maxLength: Int) =
+    (minLength, maxLength) match
+      case (min, Int.MaxValue) => m.verifying(Constraints.minLength(min))
+      case (0, max)            => m.verifying(Constraints.maxLength(max))
+      case (min, max)          => m.verifying(Constraints.minLength(min), Constraints.maxLength(max))
+
+  def cleanText(minLength: Int = 0, maxLength: Int = Int.MaxValue): Mapping[String] =
+    addLengthConstraints(cleanText, minLength, maxLength)
+
+  val cleanNonEmptyText: Mapping[String] = cleanText.verifying(nonEmptyOrSpace)
   def cleanNonEmptyText(minLength: Int = 0, maxLength: Int = Int.MaxValue): Mapping[String] =
-    cleanText(minLength, maxLength).verifying(Constraints.nonEmpty)
+    cleanText(minLength, maxLength).verifying(nonEmptyOrSpace)
+
+  def cleanTextWithSymbols(minLength: Int = 0, maxLength: Int = Int.MaxValue): Mapping[String] =
+    addLengthConstraints(cleanTextWithSymbols, minLength, maxLength)
+
+  def cleanNoSymbolsText(minLength: Int = 0, maxLength: Int = Int.MaxValue): Mapping[String] =
+    cleanTextWithSymbols(minLength, maxLength).verifying(noSymbolsConstraint)
+
+  def cleanNoSymbolsAndNonEmptyText(minLength: Int = 0, maxLength: Int = Int.MaxValue): Mapping[String] =
+    cleanNoSymbolsText(minLength, maxLength).verifying(nonEmptyOrSpace)
+
+  private val eventNameConstraint = Constraints.pattern(
+    regex = """[\p{L}\p{N}-\s:.,;'°ª\+]+""".r,
+    error = "Invalid characters; only letters, numbers, and common punctuation marks are accepted."
+  )
+
+  private val symbolsRegex =
+    raw"[\p{So}\p{block=Emoticons}\p{block=Miscellaneous Symbols and Pictographs}\p{block=Supplemental Symbols and Pictographs}]".r
+  val noSymbolsConstraint = V.Constraint[String]: t =>
+    if symbolsRegex.find(t) then V.Invalid(V.ValidationError("Must not contain emojis or other symbols"))
+    else V.Valid
 
   val slugConstraint: V.Constraint[String] =
     Constraints.pattern(
@@ -94,18 +124,11 @@ object Form:
       error = "Invalid characters; only letters, numbers, and dashes are accepted."
     )
 
-  object eventName:
-
-    def apply(minLength: Int, maxLength: Int, verifiedUser: Boolean) =
-      cleanText.verifying(
-        Constraints.minLength(minLength),
-        Constraints.maxLength(maxLength),
-        Constraints.pattern(
-          regex = """[\p{L}\p{N}-\s:.,;'°ª\+]+""".r,
-          error = "Invalid characters; only letters, numbers, and common punctuation marks are accepted."
-        ),
-        mustNotContainLichess(verifiedUser)
-      )
+  def eventName(minLength: Int, maxLength: Int, verifiedUser: Boolean) =
+    addLengthConstraints(cleanText, minLength, maxLength).verifying(
+      eventNameConstraint,
+      mustNotContainLichess(verifiedUser)
+    )
 
   object mustNotContainLichess:
     // \u0131\u0307 is ı (\u0131) with an i dot (\u0307)
@@ -154,6 +177,17 @@ object Form:
         to(str).toRight(Seq(FormError(key, s"Invalid value: $str", Nil)))
       }
       def unbind(key: String, value: A) = strBase.unbind(key, from(value))
+    def stringTryFormatter[A](
+        from: String => Either[String, A],
+        to: A => String = (a: A) => a.toString
+    ): Formatter[A] =
+      new:
+        def bind(key: String, data: Map[String, String]) = strBase
+          .bind(key, data)
+          .flatMap: bound =>
+            from(bound).left.map: err =>
+              Seq(FormError(key, err, Nil))
+        def unbind(key: String, value: A) = strBase.unbind(key, to(value))
     def int[A <: Int](to: Int => A): Formatter[A]                   = intBase.transform(to, identity)
     def intFormatter[A](from: A => Int, to: Int => A): Formatter[A] = intBase.transform(to, from)
     val tolerantBooleanFormatter: Formatter[Boolean] = new Formatter[Boolean]:
@@ -192,14 +226,12 @@ object Form:
   object url:
     import io.mola.galimatias.{ StrictErrorHandler, URL, URLParsingSettings }
     private val parser = URLParsingSettings.create.withErrorHandler(StrictErrorHandler.getInstance)
-    given Formatter[URL] with
-      def bind(key: String, data: Map[String, String]) = stringFormat.bind(key, data).flatMap { url =>
-        Try(URL.parse(parser, url)).fold(
-          err => Left(Seq(FormError(key, s"Invalid URL: $err", Nil))),
-          Right(_)
-        )
-      }
-      def unbind(key: String, url: URL) = stringFormat.unbind(key, url.toString)
+    given Formatter[URL] = formatter.stringTryFormatter(s =>
+      Try(URL.parse(parser, s)).fold(
+        err => Left(s"Invalid URL: ${err.getMessage}"),
+        Right(_)
+      )
+    )
     val field = of[URL]
 
   object username:
@@ -209,6 +241,26 @@ object Form:
       Constraints.pattern(regex = UserName.historicalRegex)
     )
     val historicalField = trim(text).verifying(historicalConstraints*).into[UserStr]
+
+  object playerTitle:
+    import chess.PlayerTitle
+    given Formatter[PlayerTitle] =
+      formatter.stringTryFormatter(s => PlayerTitle.get(s).toRight("Invalid title"))
+    val field = of[PlayerTitle]
+
+  object fideId:
+    import chess.FideId
+    given Formatter[FideId] =
+      val urlRegex = """(?:lichess\.org/fide|fide\.com/profile)/(\d+)""".r.unanchored
+      formatter.stringTryFormatter(s =>
+        s.toIntOption match
+          case Some(i) => Right(FideId(i))
+          case None =>
+            s match
+              case urlRegex(id) => Right(FideId(id.toInt))
+              case _            => Left("Invalid FIDE ID")
+      )
+    val field = of[FideId]
 
   given autoFormat[A, T](using
       sr: SameRuntime[A, T],
@@ -274,7 +326,7 @@ object Form:
           instant <- Try(millisToInstant(long)).toEither
         yield instant
       }.left.map(_ => Seq(FormError(key, "Invalid timestamp", Nil)))
-      def unbind(key: String, value: Instant) = Map(key -> value.toMillis.toString)
+      def unbind(key: String, value: Instant) = stringFormat.unbind(key, value.toMillis.toString)
     val mapping: Mapping[Instant] = of[Instant](format)
   object ISODateOrTimestamp:
     val format: Formatter[LocalDate] = new:

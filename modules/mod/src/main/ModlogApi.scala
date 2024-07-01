@@ -21,7 +21,16 @@ final class ModlogApi(repo: ModlogRepo, userRepo: UserRepo, ircApi: IrcApi, pres
   private given BSONDocumentHandler[Modlog.UserEntry] = Macros.handler
   private given Conversion[Me, ModId]                 = _.modId
 
-  private val markActions = List(Modlog.alt, Modlog.booster, Modlog.closeAccount, Modlog.engine, Modlog.troll)
+  private val markActions =
+    List(
+      Modlog.alt,
+      Modlog.booster,
+      Modlog.closeAccount,
+      Modlog.engine,
+      Modlog.troll,
+      Modlog.rankban,
+      Modlog.isolate
+    )
 
   def streamerDecline(streamerId: UserId)(using MyId) = add:
     Modlog(streamerId.some, Modlog.streamerDecline)
@@ -52,6 +61,9 @@ final class ModlogApi(repo: ModlogRepo, userRepo: UserRepo, ircApi: IrcApi, pres
 
   def troll(sus: Suspect)(using MyId) = add:
     Modlog.make(sus, if sus.user.marks.troll then Modlog.troll else Modlog.untroll)
+
+  def isolate(sus: Suspect)(using MyId) = add:
+    Modlog.make(sus, if sus.user.marks.isolate then Modlog.isolate else Modlog.unisolate)
 
   def fullCommExport(sus: Suspect)(using MyId) = add:
     Modlog.make(sus, Modlog.fullCommsExport)
@@ -129,14 +141,14 @@ final class ModlogApi(repo: ModlogRepo, userRepo: UserRepo, ircApi: IrcApi, pres
       details = s"$categ/$topic id: $postId ${text.take(400)}".some
     )
 
-  def deleteTeam(id: String, explain: String)(using MyId) = add:
+  def deleteTeam(id: TeamId, explain: String)(using MyId) = add:
     Modlog(
       none,
       Modlog.deleteTeam,
       details = s"$id: ${explain.take(200)}".some
     ).indexAs("team")
 
-  def toggleTeam(id: String, closing: Boolean, explain: String)(using MyId) = add:
+  def toggleTeam(id: TeamId, closing: Boolean, explain: String)(using MyId) = add:
     Modlog(
       none,
       if closing then Modlog.disableTeam else Modlog.enableTeam,
@@ -324,15 +336,16 @@ final class ModlogApi(repo: ModlogRepo, userRepo: UserRepo, ircApi: IrcApi, pres
     import lila.mod.{ Modlog as M }
     given MyId = m.mod.into(MyId)
     val icon = m.action match
-      case M.alt | M.arenaBan | M.engine | M.booster | M.troll | M.closeAccount            => "thorhammer"
-      case M.unalt | M.unArenaBan | M.unengine | M.unbooster | M.untroll | M.reopenAccount => "blue_circle"
-      case M.deletePost | M.deleteTeam | M.terminateTournament                             => "x"
-      case M.chatTimeout                                    => "hourglass_flowing_sand"
-      case M.closeTopic | M.disableTeam                     => "locked"
-      case M.openTopic | M.enableTeam                       => "unlocked"
-      case M.modMessage | M.postAsAnonMod | M.editAsAnonMod => "left_speech_bubble"
-      case M.blogTier | M.blogPostEdit                      => "note"
-      case _                                                => "gear"
+      case M.alt | M.arenaBan | M.engine | M.booster | M.troll | M.isolate | M.closeAccount => "thorhammer"
+      case M.unalt | M.unArenaBan | M.unengine | M.unbooster | M.untroll | M.unisolate | M.reopenAccount =>
+        "blue_circle"
+      case M.deletePost | M.deleteTeam | M.terminateTournament => "x"
+      case M.chatTimeout                                       => "hourglass_flowing_sand"
+      case M.closeTopic | M.disableTeam                        => "locked"
+      case M.openTopic | M.enableTeam                          => "unlocked"
+      case M.modMessage | M.postAsAnonMod | M.editAsAnonMod    => "left_speech_bubble"
+      case M.blogTier | M.blogPostEdit                         => "note"
+      case _                                                   => "gear"
     val text = s"""${m.showAction.capitalize} ${m.user.so(u => s"@$u")} ${~m.details}"""
     userRepo.getRoles(m.mod).map(Permission.ofDbKeys(_)).flatMap { permissions =>
       import lila.core.irc.{ ModDomain as domain }
@@ -341,8 +354,9 @@ final class ModlogApi(repo: ModlogRepo, userRepo: UserRepo, ircApi: IrcApi, pres
         case M.engine | M.unengine | M.reopenAccount | M.unalt =>
           Some(domain.Cheat)
         case M.booster | M.unbooster | M.arenaBan | M.unArenaBan => Some(domain.Boost)
-        case M.troll | M.untroll | M.chatTimeout | M.closeTopic | M.openTopic | M.disableTeam | M.enableTeam |
-            M.setKidMode | M.deletePost | M.postAsAnonMod | M.editAsAnonMod | M.blogTier | M.blogPostEdit =>
+        case M.troll | M.untroll | M.isolate | M.unisolate | M.chatTimeout |
+            M.closeTopic | M.openTopic | M.disableTeam | M.enableTeam | M.setKidMode | M.deletePost |
+            M.postAsAnonMod | M.editAsAnonMod | M.blogTier | M.blogPostEdit =>
           Some(domain.Comm)
         case _ => Some(domain.Other)
       import Permission.*

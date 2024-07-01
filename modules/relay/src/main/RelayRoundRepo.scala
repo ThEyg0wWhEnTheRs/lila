@@ -10,14 +10,16 @@ final private class RelayRoundRepo(val coll: Coll)(using Executor):
   import RelayRoundRepo.*
   import BSONHandlers.given
 
-  def byTourOrderedCursor(tour: RelayTour) =
+  def exists(id: RelayRoundId): Fu[Boolean] = coll.exists($id(id))
+
+  def byTourOrderedCursor(tourId: RelayTourId) =
     coll
-      .find(selectors.tour(tour.id))
+      .find(selectors.tour(tourId))
       .sort(sort.chrono)
       .cursor[RelayRound]()
 
-  def byTourOrdered(tour: RelayTour): Fu[List[RelayRound]] =
-    byTourOrderedCursor(tour).list(RelayTour.maxRelays)
+  def byTourOrdered(tourId: RelayTourId): Fu[List[RelayRound]] =
+    byTourOrderedCursor(tourId).list(RelayTour.maxRelays)
 
   def idsByTourOrdered(tour: RelayTour): Fu[List[RelayRoundId]] =
     coll.primitive[RelayRoundId](
@@ -27,10 +29,10 @@ final private class RelayRoundRepo(val coll: Coll)(using Executor):
       field = "_id"
     )
 
-  def tourIdByStudyId(studyId: StudyId): Fu[Option[RelayTour.Id]] =
-    coll.primitiveOne[RelayTour.Id]($id(studyId), "tourId")
+  def tourIdByStudyId(studyId: StudyId): Fu[Option[RelayTourId]] =
+    coll.primitiveOne[RelayTourId]($id(studyId), "tourId")
 
-  def idsByTourId(tourId: RelayTour.Id): Fu[List[StudyId]] =
+  def idsByTourId(tourId: RelayTourId): Fu[List[StudyId]] =
     coll
       .find(selectors.tour(tourId))
       .cursor[Bdoc]()
@@ -46,8 +48,16 @@ final private class RelayRoundRepo(val coll: Coll)(using Executor):
   def deleteByTour(tour: RelayTour): Funit =
     coll.delete.one(selectors.tour(tour.id)).void
 
-  def studyIdsOf(tourId: RelayTour.Id): Fu[List[StudyId]] =
+  def studyIdsOf(tourId: RelayTourId): Fu[List[StudyId]] =
     coll.distinctEasy[StudyId, List]("_id", selectors.tour(tourId))
+
+  def syncTargetsOfSource(source: RelayRoundId): Funit =
+    coll.update
+      .one(
+        $doc("sync.until".$exists(true), "sync.upstream.roundIds" -> source),
+        $set("sync.nextAt"                                        -> nowInstant)
+      )
+      .void
 
 private object RelayRoundRepo:
 
@@ -57,4 +67,4 @@ private object RelayRoundRepo:
     val start         = $doc("startedAt" -> -1, "startsAt" -> -1, "name" -> -1)
 
   object selectors:
-    def tour(id: RelayTour.Id) = $doc("tourId" -> id)
+    def tour(id: RelayTourId) = $doc("tourId" -> id)

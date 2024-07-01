@@ -7,28 +7,17 @@ import { side as studyViewSide } from '../studyView';
 import StudyCtrl from '../studyCtrl';
 
 export default function (ctrl: RelayCtrl, study: StudyCtrl): MaybeVNode {
-  const contributor = ctrl.members.canContribute();
+  const contributor = ctrl.members.canContribute(),
+    sync = ctrl.data.sync;
   return contributor || study.data.admin
     ? h('div.relay-admin__container', [
         contributor
           ? h('div.relay-admin', { hook: onInsert(_ => site.asset.loadCssPath('analyse.relay-admin')) }, [
               h('h2', [
                 h('span.text', { attrs: dataIcon(licon.RadioTower) }, 'Broadcast manager'),
-                h('span', [
-                  h('a', { attrs: { href: `/broadcast/round/${ctrl.id}/edit`, 'data-icon': licon.Gear } }),
-                  ' ',
-                  h('a', {
-                    attrs: {
-                      href: `/broadcast/${ctrl.data.tour.id}/new`,
-                      title: 'New round',
-                      'data-icon': licon.PlusButton,
-                    },
-                  }),
-                ]),
+                h('a', { attrs: { href: `/broadcast/round/${ctrl.id}/edit`, 'data-icon': licon.Gear } }),
               ]),
-              ctrl.data.sync?.url || ctrl.data.sync?.ids
-                ? (ctrl.data.sync.ongoing ? stateOn : stateOff)(ctrl)
-                : null,
+              sync?.url || sync?.ids || sync?.urls ? (sync.ongoing ? stateOn : stateOff)(ctrl) : statePush(),
               renderLog(ctrl),
             ])
           : undefined,
@@ -62,23 +51,23 @@ function renderLog(ctrl: RelayCtrl) {
 function stateOn(ctrl: RelayCtrl) {
   const sync = ctrl.data.sync,
     url = sync?.url,
+    urls = sync?.urls,
     ids = sync?.ids;
   return h(
     'div.state.on.clickable',
     { hook: bind('click', _ => ctrl.setSync(false)), attrs: dataIcon(licon.ChasingArrows) },
     [
-      h(
-        'div',
-        url
-          ? [
-              sync.delay ? `Connected with ${sync.delay}s delay` : 'Connected to source',
-              h('br'),
-              url.replace(/https?:\/\//, ''),
-            ]
+      h('div', [
+        'Connected ',
+        sync?.delay ? `with ${sync.delay}s delay ` : null,
+        ...(url
+          ? ['to source', h('br'), url.replace(/https?:\/\//, '')]
           : ids
-          ? ['Connected to', h('br'), ids.length, ' game(s)']
-          : [],
-      ),
+          ? ['to', h('br'), ids.length, ' game(s)']
+          : urls
+          ? ['to', h('br'), urls.length, ' sources']
+          : []),
+      ]),
     ],
   );
 }
@@ -89,6 +78,9 @@ const stateOff = (ctrl: RelayCtrl) =>
     { hook: bind('click', _ => ctrl.setSync(true)), attrs: dataIcon(licon.PlayTriangle) },
     [h('div.fat', 'Click to connect')],
   );
+
+const statePush = () =>
+  h('div.state.push', { attrs: dataIcon(licon.UploadCloud) }, ['Listening to Broadcaster App']);
 
 const dateFormatter = memoize(() =>
   window.Intl && Intl.DateTimeFormat

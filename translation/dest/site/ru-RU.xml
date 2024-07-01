@@ -72,6 +72,8 @@
   <string name="promoteVariation">Повысить приоритет варианта</string>
   <string name="makeMainLine">Сделать этот вариант главным</string>
   <string name="deleteFromHere">Удалить с этого места</string>
+  <string name="collapseVariations">Свернуть варианты</string>
+  <string name="expandVariations">Развернуть варианты</string>
   <string name="forceVariation">Сделать вариантом</string>
   <string name="copyVariationPgn">Скопировать вариант в формате PGN</string>
   <string name="move">Ход</string>
@@ -442,7 +444,7 @@
   <string name="siteDescription">Бесплатный шахматный сервер. Сыграйте в шахматы прямо сейчас в простом интерфейсе без рекламы. Не требует регистрации и скачивания программы. Играйте в шахматы с компьютером, друзьями или случайными соперниками.</string>
   <string name="xJoinedTeamY">%1$s вступил в клуб %2$s</string>
   <string name="xCreatedTeamY">%1$s организовал клуб %2$s</string>
-  <string name="startedStreaming">начал(а) стрим</string>
+  <string name="startedStreaming">начал(-а) стрим</string>
   <string name="xStartedStreaming">%s запустил стрим</string>
   <string name="averageElo">Средний рейтинг участников</string>
   <string name="location">Местоположение</string>
@@ -531,9 +533,6 @@
   <string name="safeTournamentName">Выберите для турнира как можно более безопасное название.</string>
   <string name="inappropriateNameWarning">Если название хотя бы немного покажется неуместным, вас могут заблокировать.</string>
   <string name="emptyTournamentName">Оставьте пустым, чтобы назвать турнир в честь случайного гроссмейстера.</string>
-  <string name="recommendNotTouching">Мы не рекомендуем задавать эти условия.</string>
-  <string name="fewerPlayers">Если вы зададите условия участия, то в вашем турнире сможет принять участие меньше игроков.</string>
-  <string name="showAdvancedSettings">Показать дополнительные настройки</string>
   <string name="makePrivateTournament">Сделать турнир закрытым и ограничить доступ паролем</string>
   <string name="join">Участвовать</string>
   <string name="withdraw">Покинуть</string>
@@ -573,8 +572,6 @@
   <string name="ifNoneLeaveEmpty">Если нет, оставьте пустым</string>
   <string name="profile">Профиль</string>
   <string name="editProfile">Редактировать профиль</string>
-  <string name="firstName">Имя</string>
-  <string name="lastName">Фамилия</string>
   <string name="setFlair">Задайте свой эмодзи</string>
   <string name="flair">Эмодзи</string>
   <string name="youCanHideFlair">Эта настройка скрывает все эмодзи пользователей на всём сайте.</string>
@@ -623,9 +620,7 @@
   <string name="reason">Причина</string>
   <string name="whatIsIheMatter">Что это было?</string>
   <string name="cheat">Жульничество</string>
-  <string name="insult">Оскорбление</string>
   <string name="troll">Троллинг</string>
-  <string name="ratingManipulation">Махинации с рейтингом</string>
   <string name="other">Другое</string>
   <string name="reportDescriptionHelp">Поделитесь с нами ссылками на игры, где, как вам кажется, были нарушены правила, и опишите, в чём дело. Недостаточно просто написать «он мухлюет», пожалуйста, опишите, как вы пришли к такому выводу. Мы сработаем оперативнее, если вы напишете на английском языке.</string>
   <string name="error.provideOneCheatedGameLink">Пожалуйста, добавьте ссылку хотя бы на одну игру, где по вашему мнению были нарушены правила.</string>
@@ -869,9 +864,12 @@
   <string name="transparent">Прозрачная</string>
   <string name="deviceTheme">Системная</string>
   <string name="backgroundImageUrl">URL фонового изображения:</string>
-  <string name="boardGeometry">Вид и размер доски</string>
-  <string name="boardTheme">Оформление доски</string>
-  <string name="boardSize">Размер доски</string>
+  <string name="board">Доска</string>
+  <string name="size">Размер</string>
+  <string name="opacity">Непрозрачность</string>
+  <string name="brightness">Яркость</string>
+  <string name="hue">Насыщенность</string>
+  <string name="boardReset">Сбросить на цвета по умолчанию</string>
   <string name="pieceSet">Оформление фигур</string>
   <string name="embedInYourWebsite">Получить код для вставки на свой сайт</string>
   <string name="usernameAlreadyUsed">Такое имя пользователя уже занято. Пожалуйста, попробуйте другое.</string>

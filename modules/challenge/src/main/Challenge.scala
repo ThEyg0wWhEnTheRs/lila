@@ -14,16 +14,17 @@ import lila.core.game.GameRule
 import lila.rating.PerfType
 import lila.core.user.WithPerf
 import lila.core.user.GameUser
+import lila.core.id.GameFullId
 
 case class Challenge(
-    @Key("_id") id: Challenge.Id,
+    @Key("_id") id: ChallengeId,
     status: Challenge.Status,
     variant: Variant,
     initialFen: Option[Fen.Full],
     timeControl: Challenge.TimeControl,
     mode: Mode,
     colorChoice: Challenge.ColorChoice,
-    finalColor: chess.Color,
+    finalColor: Color,
     challenger: Challenge.Challenger,
     destUser: Option[Challenge.Challenger.Registered],
     rematchOf: Option[GameId],
@@ -37,6 +38,8 @@ case class Challenge(
 ) extends hub.Challenge:
 
   import Challenge.*
+
+  def gameId = id.into(GameId)
 
   def challengerUserId = challengerUser.map(_.id)
   def challengerIsOpen = challenger match
@@ -87,6 +90,10 @@ case class Challenge(
   def isBotCompatible: Boolean   = speed >= Speed.Bullet
 
   def nonEmptyRules = rules.nonEmpty.option(rules)
+
+  def fullIdOf(game: lila.core.game.Game, direction: Direction): GameFullId =
+    game.fullIdOf:
+      if direction == Direction.Out then finalColor else !finalColor
 
 object Challenge:
 
@@ -153,12 +160,12 @@ object Challenge:
     lila.rating.PerfType(variant, speedOf(timeControl))
 
   private val idSize   = 8
-  private def randomId = Id(ThreadLocalRandom.nextString(idSize))
+  private def randomId = ChallengeId(ThreadLocalRandom.nextString(idSize))
 
   def toRegistered(u: WithPerf): Challenger.Registered =
     Challenger.Registered(u.id, Rating(u.perf.intRating, u.perf.provisional))
 
-  def randomColor = chess.Color.fromWhite(ThreadLocalRandom.nextBoolean())
+  def randomColor = Color.fromWhite(ThreadLocalRandom.nextBoolean())
 
   def makeTimeControl(clock: Option[chess.Clock.Config], days: Option[Days]): TimeControl =
     clock
@@ -190,7 +197,7 @@ object Challenge:
       case _                                                                           => mode
     val isOpen = challenger == Challenge.Challenger.Open
     new Challenge(
-      id = id.fold(randomId)(_.into(Id)),
+      id = id.fold(randomId)(_.into(ChallengeId)),
       status = Status.Created,
       variant = variant,
       initialFen =

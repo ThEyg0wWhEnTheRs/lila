@@ -17,7 +17,7 @@ case class Chapter(
     setup: Chapter.Setup,
     root: Root,
     tags: Tags,
-    order: Int,
+    order: Chapter.Order,
     ownerId: UserId,
     conceal: Option[Ply] = None,
     practice: Option[Boolean] = None,
@@ -41,7 +41,13 @@ case class Chapter(
         val parentNode = parentPath.flatMap(root.nodeAt)
         val clockSwap  = ByColor(node.clock, parentNode.flatMap(_.clock).orElse(node.clock))
         if node.color.black then clockSwap else clockSwap.swap
-      Chapter.LastPosDenorm(node.fen, node.moveOption.map(_.uci), clocks = clocks)
+      val uci = node.moveOption.map(_.uci)
+      val check = node.moveOption
+        .flatMap(_.san.value.lastOption)
+        .collect:
+          case '+' => Chapter.Check.Check
+          case '#' => Chapter.Check.Mate
+      Chapter.LastPosDenorm(node.fen, uci, check, clocks)
     copy(denorm = newDenorm)
 
   def updateRoot(f: Root => Option[Root]) =
@@ -86,7 +92,7 @@ case class Chapter(
       .openingSensibleVariants(setup.variant)
       .so(OpeningDb.searchInFens(root.mainline.map(_.fen.opening)))
 
-  def isEmptyInitial = order == 1 && root.children.isEmpty
+  def isEmptyInitial = order == 1 && root.children.isEmpty && tags.value.isEmpty
 
   def cloneFor(study: Study) =
     copy(
@@ -104,6 +110,7 @@ case class Chapter(
     fen = denorm.fold(Fen.initial)(_.fen),
     lastMove = denorm.flatMap(_.uci),
     lastMoveAt = relay.map(_.lastMoveAt),
+    check = denorm.flatMap(_.check),
     result = tags.outcome.isDefined.option(tags.outcome)
   )
 
@@ -118,6 +125,8 @@ case class Chapter(
   def isOverweight = root.children.countRecursive >= Chapter.maxNodes
 
 object Chapter:
+
+  type Order = Int
 
   // I've seen chapters with 35,000 nodes on prod.
   // It works but could be used for DoS.
@@ -137,25 +146,26 @@ object Chapter:
     def isFromFen = ~fromFen
 
   case class Relay(
-      index: Option[Int], // game index in the source URL, none to always match tags
       path: UciPath,
       lastMoveAt: Instant,
       fideIds: Option[PairOf[Option[chess.FideId]]]
   ):
     def secondsSinceLastMove: Int = (nowSeconds - lastMoveAt.toSeconds).toInt
-    def isPush                    = index.isEmpty
 
   case class ServerEval(path: UciPath, done: Boolean)
 
   type BothClocks = ByColor[Option[Centis]]
 
+  enum Check:
+    case Check, Mate
+
   /* Last position of the main line.
    * Used for chapter previews. */
-  case class LastPosDenorm(fen: Fen.Full, uci: Option[Uci], clocks: BothClocks)
+  case class LastPosDenorm(fen: Fen.Full, uci: Option[Uci], check: Option[Check], clocks: BothClocks)
 
   case class IdName(@Key("_id") id: StudyChapterId, name: StudyChapterName)
 
-  def defaultName(order: Int) = StudyChapterName(s"Chapter $order")
+  def defaultName(order: Order) = StudyChapterName(s"Chapter $order")
 
   private val defaultNameRegex           = """Chapter \d+""".r
   def isDefaultName(n: StudyChapterName) = n.value.isEmpty || defaultNameRegex.matches(n.value)

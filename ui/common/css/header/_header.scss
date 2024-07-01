@@ -8,7 +8,7 @@ body > header {
   display: flex;
   justify-content: space-between;
   position: relative;
-  z-index: z('site-header');
+  z-index: $z-site-header-106;
   max-width: 1800px;
   margin: 0 auto;
   user-select: none;
@@ -16,35 +16,26 @@ body > header {
   @include mq-sticky-header {
     max-width: unset;
     position: fixed;
-    z-index: z('above-link-overlay');
     top: 0;
     width: 100%;
     padding: 0 var(---site-header-sticky-padding);
+    border-bottom: 1px solid transparent;
     transition:
       transform $transition-duration ease-in-out,
       border-color $transition-duration ease-in-out;
 
-    @include if-transp {
-      @include back-blur(6px);
-      background: hsla(0, 0, 60%, 0.14);
-    }
-
-    @include if-not-transp {
-      &.scrolled {
-        z-index: z('site-header');
-        border-color: black;
-      }
-      border-bottom: 1px solid $m-body-gradient_bg-page--mix-50;
+    &.scrolled {
       background-image: linear-gradient(to bottom, $c-body-gradient, $m-body-gradient_bg-page--mix-50 60px);
-    }
-    @include if-light {
-      &.scrolled {
+      border-color: black;
+      @include if-light {
         border-color: hsl(0, 0%, 70%);
       }
     }
 
-    &:hover {
-      z-index: z('site-header');
+    @include if-transp {
+      @include back-blur(6px);
+      border: none;
+      background: hsla(0, 0, 60%, 0.14);
     }
 
     .dropdown {
@@ -69,6 +60,13 @@ body > header {
           visibility 0s linear $transition-duration;
       }
     }
+  }
+}
+
+body.zen {
+  @include topnav-unsticky;
+  header::before {
+    display: none;
   }
 }
 

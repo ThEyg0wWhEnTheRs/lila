@@ -5,7 +5,6 @@ import chess.format.{ Fen, Uci, UciCharPair, UciPath }
 import play.api.libs.json.*
 
 import lila.db.dsl.bsonWriteOpt
-import lila.core.fishnet.StudyChapterRequest
 import lila.core.perm.Granter
 import lila.tree.Node.Comment
 import lila.tree.{ Branch, Node, Root }
@@ -20,37 +19,35 @@ object ServerEval:
 
     private val onceEvery = scalalib.cache.OnceEvery[StudyChapterId](5 minutes)
 
-    def apply(study: Study, chapter: Chapter, userId: UserId, unlimited: Boolean = false): Funit =
+    def apply(study: Study, chapter: Chapter, userId: UserId, official: Boolean = false): Funit =
       chapter.serverEval
         .forall: eval =>
           !eval.done && onceEvery(chapter.id)
         .so:
-          val unlimitedFu =
-            fuccess(unlimited) >>|
-              fuccess(userId == UserId.lichess) >>| userApi.me(userId).map(_.soUse(Granter.opt(_.Relay)))
-          unlimitedFu.flatMap: unlimited =>
-            chapterRepo
-              .startServerEval(chapter)
-              .andDo:
-                lila.common.Bus.named.fishnet.analyseStudyChapter(
-                  StudyChapterRequest(
-                    studyId = study.id,
-                    chapterId = chapter.id,
-                    initialFen = chapter.root.fen.some,
-                    variant = chapter.setup.variant,
-                    moves = chess.format
-                      .UciDump(
-                        moves = chapter.root.mainline.map(_.move.san),
-                        initialFen = chapter.root.fen.some,
-                        variant = chapter.setup.variant,
-                        force960Notation = true
-                      )
-                      .toOption
-                      .map(_.flatMap(chess.format.Uci.apply)) | List.empty,
-                    userId = userId,
-                    unlimited = unlimited
-                  )
+          for
+            isOfficial <- fuccess(official) >>|
+              fuccess(userId.is(UserId.lichess)) >>|
+              userApi.me(userId).map(_.soUse(Granter.opt(_.Relay)))
+            _ <- chapterRepo.startServerEval(chapter)
+          yield lila.common.Bus.pub(
+            lila.core.fishnet.Bus.StudyChapterRequest(
+              studyId = study.id,
+              chapterId = chapter.id,
+              initialFen = chapter.root.fen.some,
+              variant = chapter.setup.variant,
+              moves = chess.format
+                .UciDump(
+                  moves = chapter.root.mainline.map(_.move.san),
+                  initialFen = chapter.root.fen.some,
+                  variant = chapter.setup.variant,
+                  force960Notation = true
                 )
+                .toOption
+                .map(_.flatMap(chess.format.Uci.apply)) | List.empty,
+              userId = userId,
+              official = isOfficial
+            )
+          )
 
   final class Merger(
       sequencer: StudySequencer,

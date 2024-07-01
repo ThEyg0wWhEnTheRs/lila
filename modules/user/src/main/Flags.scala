@@ -208,6 +208,8 @@ object Flags extends lila.core.user.FlagApi:
     C("PR", "Puerto Rico"),
     C("PS", "Palestine"),
     C("PT", "Portugal"),
+    C("PT-20", "Azores"),
+    C("PT-30", "Madeira"),
     C("PW", "Palau"),
     C("PY", "Paraguay"),
     C("QA", "Qatar"),
@@ -285,9 +287,6 @@ object Flags extends lila.core.user.FlagApi:
     C("_united-nations", "United Nations"),
     C("_earth", "Earth")
   )
-
-  val allPairs: List[(Code, Name)] = all.map: c =>
-    c.code -> c.name
 
   val map: Map[Code, Flag] = all.mapBy(_.code)
 

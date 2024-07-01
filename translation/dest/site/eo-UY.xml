@@ -464,9 +464,6 @@
   <string name="safeTournamentName">Elekti tre sekuran nomon por la turniro.</string>
   <string name="inappropriateNameWarning">Se vi uzas maltaŭgan aŭ maldecan nomon, ni fermos vian konton.</string>
   <string name="emptyTournamentName">Se vi lasas ĝin malplena, ni uzos la nomon de fama ŝakludisto.</string>
-  <string name="recommendNotTouching">Ni rekomendi ke vi ne tuŝas ĉi tiujn.</string>
-  <string name="fewerPlayers">Se vi aldonas aliĝpostulojn, via turniro havos malpli da ludantoj.</string>
-  <string name="showAdvancedSettings">Montri spertulajn agordojn</string>
   <string name="makePrivateTournament">Faru la turniron privata kaj restriktu la aliron per pasvorto</string>
   <string name="join">Aliĝi</string>
   <string name="withdraw">Eliri</string>
@@ -506,8 +503,6 @@
   <string name="ifNoneLeaveEmpty">Se neniu, lasu malplena</string>
   <string name="profile">Profilo</string>
   <string name="editProfile">Redakti profilon</string>
-  <string name="firstName">Persona nomo</string>
-  <string name="lastName">Familia nomo</string>
   <string name="setFlair">Agordi viaj emoĝio</string>
   <string name="flair">Emoĝio</string>
   <string name="youCanHideFlair">Estas agordo por kaŝi ĉiujn uzantajn emoĝiojn tra la tuta retejo.</string>
@@ -528,7 +523,7 @@
     <item quantity="one">%s aktivaj ludoj</item>
     <item quantity="other">%s aktivaj ludoj</item>
   </plurals>
-  <string name="automaticallyProceedToNextGameAfterMoving">Aŭtomate iri al la sekvanta ludo post movi</string>
+  <string name="automaticallyProceedToNextGameAfterMoving">Memage iri al sekvanta ludo post via movo</string>
   <string name="autoSwitch">Aŭtomata ludŝanĝado</string>
   <string name="puzzles">Puzloj</string>
   <string name="name">Nomo</string>
@@ -553,9 +548,7 @@
   <string name="reason">Kialo</string>
   <string name="whatIsIheMatter">Pri kio temas la raporto?</string>
   <string name="cheat">Trompo</string>
-  <string name="insult">Insulto</string>
   <string name="troll">Trolo</string>
-  <string name="ratingManipulation">Manipulado de rango</string>
   <string name="other">Io alia</string>
   <string name="reportDescriptionHelp">Inkluzivu la ligilon al la ludo(j) kaj ekspliku tion, kio malbonas pri la konduto de ĉi tiu uzanto.</string>
   <string name="error.provideOneCheatedGameLink">Bonvolu doni almenaŭ unu ligilon al ludo en kiu oni friponis.</string>
@@ -788,9 +781,6 @@
   <string name="transparent">Travidebla</string>
   <string name="deviceTheme">Ila etoso</string>
   <string name="backgroundImageUrl">Malantaŭografikaĵo URL:</string>
-  <string name="boardGeometry">Tabula geometrio</string>
-  <string name="boardTheme">Tabula temo</string>
-  <string name="boardSize">Tabula grandeco</string>
   <string name="pieceSet">Ŝakpecaro</string>
   <string name="embedInYourWebsite">Enkorpigi en via retejo</string>
   <string name="usernameAlreadyUsed">Oni jam uzas tiun salutnomon. Bonvolu provi alian.</string>

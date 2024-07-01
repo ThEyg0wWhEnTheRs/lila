@@ -9,6 +9,7 @@ import crazyView from '../crazy/crazyView';
 import AnalyseCtrl from '../ctrl';
 import forecastView from '../forecast/forecastView';
 import { view as keyboardView } from '../keyboard';
+import { render as renderKeyboardMove } from 'keyboardMove';
 import type * as studyDeps from '../study/studyDeps';
 import { relayView } from '../study/relay/relayView';
 import {
@@ -30,18 +31,19 @@ export default function (deps?: typeof studyDeps) {
 
 function analyseView(ctrl: AnalyseCtrl, deps?: typeof studyDeps): VNode {
   const ctx = viewContext(ctrl, deps);
-  const { study, menuIsOpen, gamebookPlayView, gaugeOn } = ctx;
+  const { study, gamebookPlayView, gaugeOn } = ctx;
 
   return renderMain(ctx, [
     ctrl.keyboardHelp && keyboardView(ctrl),
     study && deps?.studyView.overboard(study),
     renderBoard(ctx),
     gaugeOn && cevalView.renderGauge(ctrl),
-    !menuIsOpen && crazyView(ctrl, ctrl.topColor(), 'top'),
+    crazyView(ctrl, ctrl.topColor(), 'top'),
     gamebookPlayView || renderTools(ctx),
-    !menuIsOpen && crazyView(ctrl, ctrl.bottomColor(), 'bottom'),
+    crazyView(ctrl, ctrl.bottomColor(), 'bottom'),
     !gamebookPlayView && renderControls(ctrl),
     renderUnderboard(ctx),
+    ctrl.keyboardMove && renderKeyboardMove(ctrl.keyboardMove),
     trainingView(ctrl),
     ctrl.studyPractice
       ? deps?.studyPracticeView.side(study!)

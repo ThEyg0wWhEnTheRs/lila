@@ -1,10 +1,12 @@
 package lila.oauth
 
 import reactivemongo.api.bson.*
+import play.api.libs.json.*
 
 import lila.core.net.Bearer
 import lila.db.dsl.{ *, given }
 import lila.core.misc.oauth.TokenRevoke
+import lila.common.Json.given
 
 final class AccessTokenApi(
     coll: Coll,
@@ -74,7 +76,7 @@ final class AccessTokenApi(
       .flatMap: users =>
         val scope = OAuthScope.Challenge.Write
         users
-          .traverse: user =>
+          .sequentially: user =>
             coll
               .one[AccessToken]:
                 $doc(
@@ -211,6 +213,20 @@ final class AccessTokenApi(
           bearers.zip(openTokens).toMap
         }
 
+  def secretScanning(scans: List[AccessTokenApi.GithubSecretScan]): Fu[List[(AccessToken, String)]] = for
+    found <- test(scans.map(_.token))
+    res <- scans.sequentially: scan =>
+      val compromised = found.get(scan.token).flatten
+      lila.mon.security.secretScanning(scan.`type`, scan.source, compromised.isDefined).increment()
+      compromised match
+        case Some(token) =>
+          logger.branch("github").info(s"revoking token ${token.plain} for user ${token.userId}")
+          revoke(token.plain).inject((token, scan.url).some)
+        case None =>
+          logger.branch("github").info(s"ignoring token ${scan.token}")
+          fuccess(none)
+  yield res.flatten
+
   private val accessTokenCache =
     cacheApi[AccessToken.Id, Option[AccessToken.ForAuth]](1024, "oauth.access_token"):
       _.expireAfterWrite(5 minutes).buildAsyncFuture(fetchAccessToken)
@@ -228,3 +244,6 @@ final class AccessTokenApi(
 
 object AccessTokenApi:
   case class Client(origin: String, usedAt: Option[Instant], scopes: List[OAuthScope])
+
+  case class GithubSecretScan(token: Bearer, `type`: String, url: String, source: String)
+  given Reads[GithubSecretScan] = Json.reads[GithubSecretScan]

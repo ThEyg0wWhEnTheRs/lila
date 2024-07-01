@@ -2,6 +2,7 @@ package lila.core
 package pref
 
 import lila.core.userId.UserId
+import lila.core.user.User
 
 trait Pref:
   val id: UserId
@@ -14,10 +15,17 @@ trait Pref:
   val moveEvent: Int
   val highlight: Boolean
   val is3d: Boolean
+  val resizeHandle: Int
+  val theme: String
+  val pieceSet: String
 
+  def hasKeyboardMove: Boolean
+  def hasVoice: Boolean
   def showRatings: Boolean
   def animationMillis: Int
   def animationMillisForSpeedPuzzles: Int
+  def pieceNotationIsLetter: Boolean
+  def currentBg: String
 
 trait PrefApi:
   def followable(userId: UserId): Fu[Boolean]
@@ -26,6 +34,7 @@ trait PrefApi:
   def getInsightShare(userId: UserId): Future[Int]
   def getChallenge(userId: UserId): Future[Int]
   def getStudyInvite(userId: UserId): Future[Int]
+  def isolate(user: User): Funit
 
 object Message:
   val NEVER  = 1

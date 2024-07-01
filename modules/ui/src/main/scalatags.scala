@@ -1,11 +1,13 @@
 package lila.ui
 
+import cats.Monoid
 import alleycats.Zero
 import chess.PlayerTitle
 import scalalib.Render
 import scalatags.Text.all.*
 import scalatags.Text.{ Aggregate, Cap, GenericAttr }
 import scalatags.text.Builder
+import io.mola.galimatias.URL
 
 // collection of lila attrs
 trait ScalatagsAttrs:
@@ -107,6 +109,7 @@ trait ScalatagsTemplate
 
   /* Convert play URLs to scalatags attributes with toString */
   given GenericAttr[Call] = GenericAttr[Call]
+  given GenericAttr[URL]  = GenericAttr[URL]
 
 object ScalatagsTemplate extends ScalatagsTemplate
 
@@ -114,13 +117,12 @@ object ScalatagsTemplate extends ScalatagsTemplate
 trait ScalatagsExtensions:
 
   export Context.ctxMe
-  export ReverseRouterConversions.given
   export lila.core.perm.Granter
-  val Icon = lila.ui.Icon
 
   given Render[Icon] = _.value
+  given Render[URL]  = _.toString
 
-  given [A](using Render[A]): Conversion[A, scalatags.Text.Frag] = a => StringFrag(a.render)
+  given [A](using Render[A]): Conversion[A, Frag] = a => StringFrag(a.render)
 
   given opaqueIntFrag[A](using r: IntRuntime[A]): Conversion[A, Frag] = a => intFrag(r(a))
 
@@ -144,6 +146,10 @@ trait ScalatagsExtensions:
 
   val emptyFrag: Frag = RawFrag("")
   given Zero[Frag]    = Zero(emptyFrag)
+
+  given Monoid[Frag] with
+    def empty: Frag                     = emptyFrag
+    def combine(x: Frag, y: Frag): Frag = frag(x, y)
 
   val targetBlank: Modifier = (t: Builder) =>
     // Prevent tab nabbing when opening untrusted links. Apply also to trusted

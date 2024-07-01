@@ -15,14 +15,6 @@ final class TeamApi(env: Env, apiC: => Api) extends LilaController(env):
   private def api       = env.team.api
   private def paginator = env.team.paginator
 
-  private val ApiKickRateLimitPerIP = lila.memo.RateLimit.composite[IpAddress](
-    key = "team.kick.api.ip",
-    enforce = env.net.rateLimit.value
-  )(
-    ("fast", 10, 2.minutes),
-    ("slow", 50, 1.day)
-  )
-
   def all(page: Int) = Anon:
     import env.team.jsonView.given
     JsonOk:
@@ -58,9 +50,10 @@ final class TeamApi(env: Env, apiC: => Api) extends LilaController(env):
         else ctx.me.so(api.belongsTo(team.id, _))
       canView.map:
         if _ then
+          val full = getBool("full")
           apiC.jsonDownload(
             env.team
-              .memberStream(team, MaxPerSecond(20))
+              .memberStream(team, full)
               .map: (user, joinedAt) =>
                 env.api.userApi.one(user, joinedAt.some)
           )
@@ -115,7 +108,7 @@ final class TeamApi(env: Env, apiC: => Api) extends LilaController(env):
             .log("security")
             .warn(s"API team.kick limited team:${teamId} user:${me.username} ip:${req.ipAddress}")
         fuccess(ApiResult.Limited)
-      ApiKickRateLimitPerIP(req.ipAddress, limited, cost = if me.isVerified || me.isApiHog then 0 else 1):
+      limit.teamKick(req.ipAddress, limited, cost = if me.isVerified || me.isApiHog then 0 else 1):
         api.kick(team, username.id).inject(ApiResult.Done)
   }
 

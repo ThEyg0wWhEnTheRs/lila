@@ -111,10 +111,10 @@ final class IrwinApi(
       )
 
     private[irwin] def fromTournamentLeaders(suspects: List[Suspect]): Funit =
-      suspects.traverse_(insert(_, _.Tournament))
+      suspects.sequentiallyVoid(insert(_, _.Tournament))
 
     private[irwin] def topOnline(leaders: List[Suspect]): Funit =
-      leaders.traverse_(insert(_, _.Leaderboard))
+      leaders.sequentiallyVoid(insert(_, _.Leaderboard))
 
     import lila.game.BSONHandlers.given
 
@@ -153,10 +153,8 @@ final class IrwinApi(
     private[IrwinApi] def apply(report: IrwinReport): Funit =
       subs.get(report.suspectId).so { modIds =>
         subs = subs - report.suspectId
-        modIds
-          .map { modId =>
+        modIds.toList
+          .sequentiallyVoid { modId =>
             notifyApi.notifyOne(modId, lila.core.notify.IrwinDone(report.suspectId.value))
           }
-          .parallel
-          .void
       }

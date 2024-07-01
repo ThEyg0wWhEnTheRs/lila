@@ -46,11 +46,10 @@ The Lichess team"""
       import lila.core.i18n.I18nKey
       s"""${I18nKey.onboarding.welcome.txt()}\n${I18nKey.site.lichessPatronInfo.txt()}"""
 
-  def onTitleSet(username: UserStr): Funit = {
+  def onTitleSet(username: UserStr, title: chess.PlayerTitle): Funit = {
     for
       user        <- userApi.byId(username).orFail(s"No such user $username")
       emailOption <- userApi.email(user.id)
-      title       <- fuccess(user.title).orFail("User doesn't have a title!")
       body = alsoSendAsPrivateMessage(user): _ =>
         s"""Hello,
 

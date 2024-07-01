@@ -18,7 +18,6 @@ trait ResponseBuilder(using Executor)
   export scalatags.Text.Frag
 
   given Conversion[Result, Fu[Result]] = fuccess(_)
-  given Conversion[Frag, Fu[Frag]]     = fuccess(_)
 
   val rateLimitedMsg  = "Too many requests. Try again later."
   val rateLimitedJson = TooManyRequests(jsonError(rateLimitedMsg))
@@ -44,6 +43,15 @@ trait ResponseBuilder(using Executor)
   def jsOptToNdJson(source: Source[Option[JsValue], ?]): Result =
     strToNdJson(ndJson.jsOptToString(source))
 
+  /* We roll our own action, as we don't want to compose play Actions. */
+  def action[A](parser: BodyParser[A])(handler: Request[A] ?=> Fu[Result]): EssentialAction = new:
+    import play.api.libs.streams.Accumulator
+    import akka.util.ByteString
+    def apply(rh: RequestHeader): Accumulator[ByteString, Result] =
+      parser(rh).mapFuture:
+        case Left(r)  => fuccess(r)
+        case Right(a) => handler(using Request(rh, a))
+
   def redirectWithQueryString(path: String)(using req: RequestHeader) =
     Redirect:
       if req.target.uriString.contains("?")
@@ -54,10 +62,12 @@ trait ResponseBuilder(using Executor)
     "swag" -> "https://shop.spreadshirt.com/lichess-org",
     "yt"   -> "https://www.youtube.com/c/LichessDotOrg",
     "dmca" -> "https://docs.google.com/forms/d/e/1FAIpQLSdRVaJ6Wk2KHcrLcY0BxM7lTwYSQHDsY2DsGwbYoLUBo3ngfQ/viewform",
-    "fishnet" -> "https://github.com/lichess-org/fishnet",
-    "qa"      -> "/faq",
-    "help"    -> "/contact",
-    "support" -> "/contact",
-    "donate"  -> "/patron"
+    "fishnet"      -> "https://github.com/lichess-org/fishnet",
+    "qa"           -> "/faq",
+    "help"         -> "/contact",
+    "support"      -> "/contact",
+    "donate"       -> "/patron",
+    "how-to-cheat" -> "/page/how-to-cheat",
+    "help/master"  -> "/verify-title"
   )
   def staticRedirect(key: String): Option[Fu[Result]] = movedMap.get(key).map { MovedPermanently(_) }

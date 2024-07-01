@@ -1,18 +1,16 @@
-import { url as assetUrl, jsModule } from './assets';
+import { url as assetUrl, jsModule } from './asset';
 import { storage } from './storage';
 
 export default async function () {
   if (!('serviceWorker' in navigator && 'Notification' in window && 'PushManager' in window)) return;
   const workerUrl = new URL(
-    assetUrl(jsModule('serviceWorker'), { sameDomain: true }),
+    assetUrl(jsModule('serviceWorker'), { pathOnly: true }),
     self.location.href, // eslint-disable-line no-restricted-globals
   );
   workerUrl.searchParams.set('asset-url', document.body.getAttribute('data-asset-url')!);
-  if (document.body.getAttribute('data-dev')) workerUrl.searchParams.set('dev', '1');
-  const updateViaCache = document.body.getAttribute('data-dev') ? 'none' : 'all';
   const reg = await navigator.serviceWorker.register(workerUrl.href, {
     scope: '/',
-    updateViaCache,
+    updateViaCache: 'all',
   });
   const store = storage.make('push-subscribed');
   const vapid = document.body.getAttribute('data-vapid');

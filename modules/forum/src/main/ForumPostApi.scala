@@ -1,13 +1,12 @@
 package lila.forum
 
-import scala.util.chaining.*
-
 import lila.common.Bus
 import lila.db.dsl.{ *, given }
 import lila.core.shutup.{ ShutupApi, PublicSource }
 import lila.core.timeline.{ ForumPost as TimelinePost, Propagate }
 import lila.core.perm.Granter as MasterGranter
 import lila.core.forum.{ ForumPost as _, ForumCateg as _, * }
+import lila.core.forum.BusForum
 
 final class ForumPostApi(
     postRepo: ForumPostRepo,
@@ -59,15 +58,20 @@ final class ForumPostApi(
             if anonMod
             then logAnonPost(post, edit = false)
             else if !post.troll && !categ.quiet then
-              lila.common.Bus.named.timeline(Propagate(TimelinePost(me, topic.id, topic.name, post.id)).pipe {
-                _.toFollowersOf(me).toUsers(topicUserIds).exceptUser(me).withTeam(categ.team)
-              })
+              lila.common.Bus.pub:
+                Propagate(TimelinePost(me, topic.id, topic.name, post.id))
+                  .toFollowersOf(me)
+                  .toUsers(topicUserIds)
+                  .exceptUser(me)
+                  .withTeam(categ.team)
             else if categ.id == ForumCateg.diagnosticId then
-              lila.common.Bus.named
-                .timeline(Propagate(TimelinePost(me, topic.id, topic.name, post.id)).toUsers(topicUserIds))
+              lila.common.Bus.pub:
+                Propagate(TimelinePost(me, topic.id, topic.name, post.id))
+                  .toUsers(topicUserIds)
+                  .exceptUser(me)
             lila.mon.forum.post.create.increment()
             mentionNotifier.notifyMentionedUsers(post, topic)
-            Bus.chan.forumPost(CreatePost(post.mini))
+            Bus.pub(BusForum.CreatePost(post.mini))
             post
       }
     }
@@ -107,7 +111,7 @@ final class ForumPostApi(
     postRepo.coll.byId[ForumPost](postId)
 
   def react(
-      categSlug: String,
+      categId: ForumCategId,
       postId: ForumPostId,
       reactionStr: String,
       v: Boolean
@@ -116,7 +120,7 @@ final class ForumPostApi(
       if v then lila.mon.forum.reaction(reaction.key).increment()
       postRepo.coll
         .findAndUpdateSimplified[ForumPost](
-          selector = $id(postId) ++ $doc("categId" -> categSlug, "userId".$ne(me.userId)),
+          selector = $id(postId) ++ $doc("categId" -> categId, "userId".$ne(me.userId)),
           update =
             if v then $addToSet(s"reactions.$reaction" -> me.userId)
             else $pull(s"reactions.$reaction"          -> me.userId),
@@ -125,14 +129,14 @@ final class ForumPostApi(
         .andDo:
           if me.marks.troll && reaction == ForumPost.Reaction.MinusOne && v then
             scheduler.scheduleOnce(5 minutes):
-              react(categSlug, postId, reaction.key, false)
+              react(categId, postId, reaction.key, false)
     }
 
-  def views(posts: List[ForumPost]): Fu[List[PostView]] =
+  def views(posts: Seq[ForumPost]): Fu[List[PostView]] =
     for
       topics <- topicRepo.coll.byIds[ForumTopic, ForumTopicId](posts.map(_.topicId).distinct)
       categs <- categRepo.coll.byIds[ForumCateg, ForumCategId](topics.map(_.categId).distinct)
-    yield posts.flatMap: post =>
+    yield posts.toList.flatMap: post =>
       for
         topic <- topics.find(_.id == post.topicId)
         categ <- categs.find(_.id == topic.categId)
@@ -184,14 +188,13 @@ final class ForumPostApi(
       categs     <- categRepo.visibleWithTeams(teams, isMod)
       diagnostic <- if isMod then fuccess(none) else forUser.so(diagnosticForUser)
       views <- categs
-        .map: categ =>
+        .parallel: categ =>
           get(categ.lastPostId(forUser)).map: topicPost =>
             CategView(
               categ,
               topicPost.map { case (topic, post) => (topic, post, topic.lastPage(config.postMaxPerPage)) },
               forUser
             )
-        .parallel
     yield views ++ diagnostic.toList
 
   private def diagnosticForUser(user: User): Fu[Option[CategView]] = // CategView with user's topic/post
@@ -220,14 +223,11 @@ final class ForumPostApi(
     postRepo.coll.update
       .one($id(post.id), post.erase)
       .void
-      .andDo:
-        Bus.chan.forumPost(ErasePost(post.id))
 
   def eraseFromSearchIndex(user: User): Funit =
     postRepo.coll
       .distinctEasy[ForumPostId, List]("_id", $doc("userId" -> user.id), _.sec)
-      .map: ids =>
-        Bus.chan.forumPost(ErasePosts(ids))
+      .map(ids => Bus.pub(BusForum.ErasePosts(ids)))
 
   def teamIdOfPostId(postId: ForumPostId): Fu[Option[TeamId]] =
     postRepo.coll.byId[ForumPost](postId).flatMapz { post =>

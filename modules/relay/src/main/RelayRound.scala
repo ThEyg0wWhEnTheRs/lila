@@ -5,11 +5,12 @@ import reactivemongo.api.bson.Macros.Annotations.Key
 
 import scalalib.model.Seconds
 import lila.study.Study
+import io.mola.galimatias.URL
 
 case class RelayRound(
     /* Same as the Study id it refers to */
     @Key("_id") id: RelayRoundId,
-    tourId: RelayTour.Id,
+    tourId: RelayTourId,
     name: RelayRound.Name,
     caption: Option[RelayRound.Caption],
     sync: RelayRound.Sync,
@@ -35,15 +36,15 @@ case class RelayRound(
       sync = sync.pause
     )
 
-  def resume =
+  def resume(official: Boolean) =
     copy(
       finished = false,
-      sync = sync.play
+      sync = sync.play(official)
     )
 
   def ensureStarted     = copy(startedAt = startedAt.orElse(nowInstant.some))
   def hasStarted        = startedAt.isDefined
-  def hasStartedEarly   = hasStarted && startsAt.exists(_.isAfter(nowInstant))
+  def hasStartedEarly   = startedAt.exists(at => startsAt.exists(_.isAfter(at)))
   def shouldHaveStarted = hasStarted || startsAt.exists(_.isBefore(nowInstant))
 
   def shouldGiveUp =
@@ -73,19 +74,21 @@ object RelayRound:
       nextAt: Option[Instant],         // when to run next sync
       period: Option[Seconds],         // override time between two sync (rare)
       delay: Option[Seconds],          // add delay between the source and the study
+      onlyRound: Option[Int],          // only keep games with [Round "x"]
+      slices: Option[List[RelayGame.Slice]] = none,
       log: SyncLog
   ):
-
     def hasUpstream = upstream.isDefined
+    def isPush      = upstream.isEmpty
 
-    def renew =
-      if hasUpstream then copy(until = nowInstant.plusHours(1).some)
+    def renew(official: Boolean) =
+      if hasUpstream then copy(until = nowInstant.plusHours(if official then 3 else 1).some)
       else pause
 
-    def ongoing = until.so(nowInstant.isBefore)
+    def ongoing = until.so(_.isAfterNow)
 
-    def play =
-      if hasUpstream then renew.copy(nextAt = nextAt.orElse(nowInstant.plusSeconds(3).some))
+    def play(official: Boolean) =
+      if hasUpstream then renew(official).copy(nextAt = nextAt.orElse(nowInstant.plusSeconds(3).some))
       else pause
 
     def pause =
@@ -97,7 +100,7 @@ object RelayRound:
     def seconds: Option[Int] = until
       .map: u =>
         (u.toSeconds - nowSeconds).toInt
-      .filter(0 <)
+      .filter(0 < _)
 
     def playing = nextAt.isDefined
     def paused  = !playing
@@ -105,27 +108,50 @@ object RelayRound:
     def addLog(event: SyncLog.Event) = copy(log = log.add(event))
     def clearLog                     = copy(log = SyncLog.empty)
 
-    def hasDelay      = delay.exists(_.value > 0)
     def nonEmptyDelay = delay.filter(_.value > 0)
+    def hasDelay      = nonEmptyDelay.isDefined
 
     override def toString = upstream.toString
 
   object Sync:
-    sealed trait Upstream:
-      def asUrl: Option[UpstreamUrl] = this match
-        case url: UpstreamUrl => url.some
-        case _                => none
-      def local = asUrl.fold(true)(_.isLocal)
-    case class UpstreamUrl(url: String) extends Upstream:
-      def isLocal = url.contains("://127.0.0.1") || url.contains("://[::1]") || url.contains("://localhost")
-      def withRound = url.split(" ", 2) match
-        case Array(u, round) => UpstreamUrl.WithRound(u, round.toIntOption)
-        case _               => UpstreamUrl.WithRound(url, none)
-      def isLcc: Boolean = UpstreamUrl.LccRegex.matches(url)
-    object UpstreamUrl:
-      case class WithRound(url: String, round: Option[Int])
-      val LccRegex = """.*view\.livechesscloud\.com/#?([0-9a-f\-]+)""".r
-    case class UpstreamIds(ids: List[GameId]) extends Upstream
+    enum Upstream:
+      case Url(url: URL)          extends Upstream
+      case Urls(urls: List[URL])  extends Upstream
+      case Ids(ids: List[GameId]) extends Upstream
+      def lcc: Option[Lcc] = this match
+        case Url(url) =>
+          url.toString match
+            case lccRegex(id, round) => round.toIntOption.map(Lcc(id, _))
+            case _                   => none
+        case _ => none
+      def isLcc = lcc.isDefined
+      def looksLikeLcc = this match
+        case Url(url)   => Sync.looksLikeLcc(url)
+        case Urls(urls) => urls.exists(Sync.looksLikeLcc)
+        case _          => false
+
+      def roundId: Option[RelayRoundId] = this match
+        case Url(url) =>
+          url.path.split("/") match
+            case Array("", "broadcast", _, _, id) =>
+              val cleanId = if id.endsWith(".pgn") then id.dropRight(4) else id
+              (cleanId.size == 8).option(RelayRoundId(cleanId))
+            case _ => none
+        case _ => none
+      def isRound = roundId.isDefined
+      def roundIds: List[RelayRoundId] = this match
+        case url: Url   => url.roundId.toList
+        case Urls(urls) => urls.map(Url.apply).flatMap(_.roundId)
+        case _          => Nil
+
+    case class Lcc(id: String, round: Int):
+      def pageUrl  = URL.parse(s"https://view.livechesscloud.com/#$id/$round")
+      def indexUrl = URL.parse(s"http://1.pool.livechesscloud.com/get/$id/round-$round/index.json")
+      def gameUrl(game: Int) =
+        URL.parse(s"http://1.pool.livechesscloud.com/get/$id/round-$round/game-$game.json")
+
+    private val lccRegex               = """view\.livechesscloud\.com/?#?([0-9a-f\-]+)/(\d+)""".r.unanchored
+    private def looksLikeLcc(url: URL) = url.toString.contains(".livechesscloud.com/")
 
   trait AndTour:
     val tour: RelayTour

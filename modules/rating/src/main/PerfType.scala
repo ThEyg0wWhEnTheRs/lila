@@ -4,7 +4,7 @@ import cats.derived.*
 import chess.variant
 import chess.{ Centis, Speed }
 import lila.core.i18n.{ I18nKey, Translate }
-import lila.core.perf.{ PerfId, PerfKeyStr }
+import lila.core.perf.PerfId
 import lila.ui.Icon
 
 enum PerfType(
@@ -171,11 +171,9 @@ object PerfType:
   val byId                            = all.mapBy(_.id)
 
   def apply(key: PerfKey): PerfType =
-    byKey.getOrElse(key, sys.error(s"Impossible: $key couldn't have been instanciated"))
+    byKey.getOrElse(key, sys.error(s"Impossible: $key couldn't have been instantiated"))
 
   def apply(id: PerfId): Option[PerfType] = byId.get(id)
-
-  def read(key: PerfKeyStr): Option[PerfType] = PerfKey.read(key).map(apply)
 
   val nonPuzzle: List[PerfType] = all.filter(_ != Puzzle)
 

@@ -51,7 +51,7 @@ export function main() {
   env.watch = env.rebuild || args.includes('--watch') || oneDashArgs.includes('w');
   env.prod = args.includes('--prod') || oneDashArgs.includes('p');
   env.debug = args.includes('--debug') || oneDashArgs.includes('d');
-  env.clean = args.some(x => x === '--clean-build') || oneDashArgs.includes('c');
+  env.clean = args.some(x => x.startsWith('--clean')) || oneDashArgs.includes('c');
   env.install = !args.includes('--no-install') && !oneDashArgs.includes('n');
   env.rgb = args.includes('--rgb');
 
@@ -178,6 +178,9 @@ class Env {
   get typesDir(): string {
     return path.join(this.uiDir, '@types');
   }
+  get manifestFile(): string {
+    return path.join(this.jsDir, `manifest.${this.prod ? 'prod' : 'dev'}.json`);
+  }
   warn(d: any, ctx = 'build') {
     this.log(d, { ctx: ctx, warn: true });
   }
@@ -193,10 +196,8 @@ class Env {
   }
   log(d: any, { ctx = 'build', error = false, warn = false } = {}) {
     let text: string =
-      typeof d === 'string'
-        ? d
-        : d instanceof Buffer
-        ? d.toString('utf8')
+      !d || typeof d === 'string' || d instanceof Buffer
+        ? String(d)
         : Array.isArray(d)
         ? d.join('\n')
         : JSON.stringify(d);

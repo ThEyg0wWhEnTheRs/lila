@@ -31,8 +31,9 @@ import _root_.chess.variant.Variant
 import lila.core.userId.MyId
 import lila.core.perf.PerfKey
 
-val maxPlaying         = Max(200) // including correspondence
-val maxPlayingRealtime = Max(100)
+val maxPlaying           = Max(200) // including correspondence
+val maxPlayingRealtime   = Max(100)
+val favOpponentOverGames = 1000
 
 case class PlayerRef(gameId: GameId, playerId: GamePlayerId)
 object PlayerRef:
@@ -101,6 +102,8 @@ trait Event:
   def watcher: Boolean      = false
   def troll: Boolean        = false
   def moveBy: Option[Color] = None
+
+val anonCookieName = "rk2"
 
 trait GameApi:
   def getSourceAndUserIds(id: GameId): Fu[(Option[Source], List[UserId])]

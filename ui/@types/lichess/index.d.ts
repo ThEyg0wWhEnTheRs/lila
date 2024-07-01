@@ -13,7 +13,11 @@
 // file://./../../site/src/site.ts
 interface Site {
   debug: boolean;
-  info: any;
+  info: {
+    commit: string;
+    message: string;
+    date: string;
+  };
   StrongSocket: {
     // file://./../../site/src/socket.ts
     new (url: string, version: number | false, cfg?: any): any;
@@ -36,9 +40,10 @@ interface Site {
     flairSrc(flair: Flair): string;
     loadCss(path: string): Promise<void>;
     loadCssPath(path: string): Promise<void>;
+    removeCssPath(path: string): void;
     jsModule(name: string): string;
     loadIife(path: string, opts?: AssetUrlOpts): Promise<void>;
-    loadEsm<T, ModuleOpts = any>(name: string, opts?: { init?: ModuleOpts; url?: AssetUrlOpts }): Promise<T>;
+    loadEsm<T>(name: string, opts?: EsmModuleOpts): Promise<T>;
     userComplete(opts: UserCompleteOpts): Promise<UserComplete>;
   };
   idleTimer(delay: number, onIdle: () => void, onWakeUp: () => void): void;
@@ -66,6 +71,7 @@ interface Site {
   };
   timeago(date: number | Date): string;
   dateFormat: () => (date: Date) => string;
+  displayLocale: string;
   contentLoaded(parent?: HTMLElement): void;
   blindMode: boolean;
   makeChat(data: any): any;
@@ -86,6 +92,11 @@ interface Site {
   quietMode?: boolean;
   analysis?: any; // expose the analysis ctrl
   manifest: { css: Record<string, string>; js: Record<string, string> };
+}
+
+interface EsmModuleOpts extends AssetUrlOpts {
+  init?: any;
+  npm?: boolean;
 }
 
 interface LichessLog {
@@ -188,9 +199,9 @@ interface Cookie {
 }
 
 interface AssetUrlOpts {
-  sameDomain?: boolean;
-  noVersion?: boolean;
-  version?: string;
+  documentOrigin?: boolean;
+  pathOnly?: boolean;
+  version?: false | string;
 }
 
 type Timeout = ReturnType<typeof setTimeout>;
@@ -309,8 +320,6 @@ interface Window {
   readonly Stripe: any;
   readonly Textcomplete: any;
   readonly UserComplete: any;
-  readonly Sortable: any;
-  readonly Peer: any;
   readonly Tagify: unknown;
   readonly paypalOrder: unknown;
   readonly paypalSubscription: unknown;

@@ -42,6 +42,7 @@ export type Federations = { [key: string]: string };
 export interface StudyData {
   id: string;
   name: string;
+  flair?: Flair;
   members: StudyMemberMap;
   position: Position;
   ownerId: string;
@@ -174,6 +175,7 @@ export interface ChapterPreviewBase {
   name: string;
   status?: StatusStr;
   lastMove?: string;
+  check?: '+' | '#';
 }
 
 export interface ChapterPreviewFromServer extends ChapterPreviewBase {
@@ -202,17 +204,17 @@ export interface Federation {
   id: string;
   name: string;
 }
-export interface ChapterPreviewBase {
-  name: string;
+export interface ChapterPreviewPlayerBase {
+  name?: string;
   title?: string;
   rating?: number;
   clock?: ClockCentis;
   team?: string;
 }
-export interface ChapterPreviewPlayerFromServer extends ChapterPreviewBase {
+export interface ChapterPreviewPlayerFromServer extends ChapterPreviewPlayerBase {
   fed?: string;
 }
-export interface ChapterPreviewPlayer extends ChapterPreviewBase {
+export interface ChapterPreviewPlayer extends ChapterPreviewPlayerBase {
   fed?: Federation;
 }
 

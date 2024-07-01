@@ -2,7 +2,6 @@ import { h, VNode } from 'snabbdom';
 import { Api as CgApi } from 'chessground/api';
 import { Config as CgConfig } from 'chessground/config';
 import * as cg from 'chessground/types';
-import { DrawShape } from 'chessground/draw';
 import resizeHandle from 'common/resize';
 import AnalyseCtrl from './ctrl';
 import * as Prefs from 'common/prefs';
@@ -10,12 +9,7 @@ import * as Prefs from 'common/prefs';
 export const render = (ctrl: AnalyseCtrl): VNode =>
   h('div.cg-wrap.cgv' + ctrl.cgVersion.js, {
     hook: {
-      insert: vnode => {
-        ctrl.chessground = site.makeChessground(vnode.elm as HTMLElement, makeConfig(ctrl));
-        ctrl.setAutoShapes();
-        if (ctrl.node.shapes) ctrl.chessground.setShapes(ctrl.node.shapes as DrawShape[]);
-        ctrl.cgVersion.dom = ctrl.cgVersion.js;
-      },
+      insert: vnode => ctrl.setChessground(site.makeChessground(vnode.elm as HTMLElement, makeConfig(ctrl))),
       destroy: _ => ctrl.chessground.destroy(),
     },
   });
@@ -38,6 +32,7 @@ export function makeConfig(ctrl: AnalyseCtrl): CgConfig {
     lastMove: opts.lastMove,
     orientation: ctrl.bottomColor(),
     coordinates: pref.coords !== Prefs.Coords.Hidden,
+    coordinatesOnSquares: pref.coords === Prefs.Coords.All,
     addPieceZIndex: pref.is3d,
     addDimensionsCssVarsTo: document.body,
     viewOnly: false,

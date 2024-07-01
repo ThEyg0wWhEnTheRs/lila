@@ -9,7 +9,7 @@ const globOpts: fg.Options = {
   markDirectories: true,
 };
 
-const globs = [
+const allGlobs = [
   '**/node_modules',
   '**/css/**/gen',
   'ui/.build/dist/css',
@@ -17,10 +17,10 @@ const globs = [
   'ui/*/tsconfig.tsbuildinfo',
   'public/compiled',
   'public/npm',
-  'public/css/*.css*',
+  'public/css',
 ];
 
-export async function clean() {
+export async function clean(globs: string[] = allGlobs) {
   if (!env.clean) return;
 
   for (const glob of globs) {

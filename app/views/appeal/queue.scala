@@ -1,12 +1,11 @@
-package views.html
-package appeal
+package views.appeal
 
-import lila.app.templating.Environment.{ *, given }
-import lila.ui.ScalatagsTemplate.{ *, given }
+import lila.app.UiEnv.{ *, given }
+
 import lila.appeal.Appeal
+import lila.appeal.Appeal.Filter
 import lila.report.Report.Inquiry
-
-import Appeal.Filter
+import lila.mod.ui.PendingCounts
 
 object queue:
 
@@ -16,10 +15,9 @@ object queue:
       filter: Option[Filter],
       markedByMe: Set[UserId],
       scores: lila.report.Room.Scores,
-      streamers: Int,
-      nbAppeals: Int
-  )(using PageContext) =
-    views.html.report.list.layout("appeal", scores, streamers, nbAppeals)(
+      pending: PendingCounts
+  )(using Context) =
+    views.report.layout("appeal", scores, pending):
       table(cls := "slist slist-pad see appeal-queue")(
         thead(
           tr(
@@ -42,7 +40,7 @@ object queue:
                       cls      := "marked-by-me text"
                     )("My mark")
                   ),
-                views.html.user.mod.userMarks(user, None)
+                views.mod.user.userMarks(user, None)
               ),
               td(appeal.msgs.lastOption.map: msg =>
                 frag(
@@ -52,7 +50,7 @@ object queue:
                   p(shorten(msg.text, 200))
                 )),
               td(
-                a(href := routes.Appeal.show(appeal.id), cls := "button button-empty")("View"),
+                a(href := routes.Appeal.show(appeal.userId), cls := "button button-empty")("View"),
                 inquiries.get(appeal.userId).map { i =>
                   frag(userIdLink(i.mod.some), nbsp, "is handling this")
                 }
@@ -61,7 +59,6 @@ object queue:
           }
         )
       )
-    )
 
   private def filterMarks(current: Option[Filter]) =
     span(cls := "appeal-filters btn-rack"):

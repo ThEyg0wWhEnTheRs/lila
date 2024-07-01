@@ -70,6 +70,8 @@
   <string name="promoteVariation">Bu varyanttan devam et</string>
   <string name="makeMainLine">Ana devam yolu yap</string>
   <string name="deleteFromHere">Bu hamleden sonrasını sil</string>
+  <string name="collapseVariations">Varyasyonları daralt</string>
+  <string name="expandVariations">Varyasyonları genişler</string>
   <string name="forceVariation">Varyant olarak göster</string>
   <string name="copyVariationPgn">Varyasyon PGN\'sini kopyala</string>
   <string name="move">Hamle</string>
@@ -465,9 +467,6 @@
   <string name="safeTournamentName">Turnuva için oldukça güvenli bir isim seçin.</string>
   <string name="inappropriateNameWarning">Herhangi bir uygunsuz isim, hesabınızın yasaklanmasına yol açabilir.</string>
   <string name="emptyTournamentName">Kutuyu boş bırakarak turnuvaya rastgele bir Büyükusta\'nın ismini verebilirsiniz.</string>
-  <string name="recommendNotTouching">Bu ayarlara dokunmamanızı öneririz.</string>
-  <string name="fewerPlayers">Turnuvaya katılım şartı koyarsanız, daha az oyuncu katılacaktır.</string>
-  <string name="showAdvancedSettings">Gelişmiş ayarları göster</string>
   <string name="makePrivateTournament">Turnuvayı özel olarak ayarlayın ve şifre koyarak erişimi kısıtlayın</string>
   <string name="join">Katıl</string>
   <string name="withdraw">Çekil</string>
@@ -507,8 +506,7 @@
   <string name="ifNoneLeaveEmpty">Eğer yoksa, boş bırakın</string>
   <string name="profile">Profil</string>
   <string name="editProfile">Profili düzenle</string>
-  <string name="firstName">Ad</string>
-  <string name="lastName">Soyad</string>
+  <string name="realName">Gerçek isim</string>
   <string name="setFlair">Rozetinizi seçin</string>
   <string name="flair">Rozet</string>
   <string name="youCanHideFlair">Ayarlardan oyuncu rozetlerini gizleyebilirsiniz.</string>
@@ -555,9 +553,7 @@
   <string name="reason">Sebep</string>
   <string name="whatIsIheMatter">Problem nedir?</string>
   <string name="cheat">Hile</string>
-  <string name="insult">Hakaret</string>
   <string name="troll">Trol</string>
-  <string name="ratingManipulation">Puan manipülasyonu</string>
   <string name="other">Diğer</string>
   <string name="reportDescriptionHelp">Raporlamak istediğiniz oyunun linkini yapıştırın ve sorununuzu açıklayın. Lütfen sadece \"hile yapıyor\" gibisinden açıklama yazmayın, hile olduğunu nasıl anladığınızı açıklayın. Rapor edeceğiniz kişiyi ya da oyunu \"İngilizce\" açıklarsanız, daha hızlı sonuca ulaşırsınız.</string>
   <string name="error.provideOneCheatedGameLink">Lütfen hileli gördüğünüz en az 1 adet oyun linki verin.</string>
@@ -706,6 +702,7 @@
   <string name="toggleVariationArrows">Varyasyon oklarını aç/kapat</string>
   <string name="cyclePreviousOrNextVariation">Önceki/sonraki varyasyona geç</string>
   <string name="toggleGlyphAnnotations">Glif dipnotlarını aç/kapat</string>
+  <string name="togglePositionAnnotations">Konum açıklamalarını değiştir</string>
   <string name="variationArrowsInfo">Varyasyon okları, hamle listesini kullanmadan gezinmenizi sağlar.</string>
   <string name="playSelectedMove">seçili hamleyi oyna</string>
   <string name="newTournament">Yeni turnuva</string>
@@ -790,9 +787,12 @@
   <string name="transparent">Şeffaf</string>
   <string name="deviceTheme">Cihaz teması</string>
   <string name="backgroundImageUrl">Arka plan resim linki:</string>
-  <string name="boardGeometry">Tahta geometrisi</string>
-  <string name="boardTheme">Tahta teması</string>
-  <string name="boardSize">Tahta boyutu</string>
+  <string name="board">Tahta</string>
+  <string name="size">Boyut</string>
+  <string name="opacity">Opaklık</string>
+  <string name="brightness">Parlaklık</string>
+  <string name="hue">Ton</string>
+  <string name="boardReset">Renkleri varsayılana döndür</string>
   <string name="pieceSet">Taş seti</string>
   <string name="embedInYourWebsite">İnternet sitenizde gömülü olarak paylaşın</string>
   <string name="usernameAlreadyUsed">Bu kullanıcı adı zaten kullanılıyor, lütfen başka bir kullanıcı adı deneyin.</string>

@@ -2,10 +2,9 @@ package controllers
 
 import chess.format.Fen
 import chess.variant.{ FromPosition, Standard, Variant }
-import chess.{ ByColor, FullMoveNumber, Situation, White }
+import chess.{ ByColor, FullMoveNumber, Situation }
 import play.api.libs.json.Json
 import play.api.mvc.*
-import views.*
 
 import lila.app.{ *, given }
 import lila.common.HTTPRequest
@@ -17,7 +16,7 @@ final class UserAnalysis(
     env: Env,
     gameC: => Game
 ) extends LilaController(env)
-    with TheftPrevention:
+    with lila.web.TheftPrevention:
 
   def index = load("", Standard)
 
@@ -39,30 +38,28 @@ final class UserAnalysis(
       .orElse(get("fen"))
       .map(Fen.Full.clean)
     val pov         = makePov(decodedFen, variant)
-    val orientation = get("color").flatMap(chess.Color.fromName) | pov.color
+    val orientation = get("color").flatMap(Color.fromName) | pov.color
     for
       data <- env.api.roundApi.userAnalysisJson(
         pov,
         ctx.pref,
         decodedFen,
         orientation,
-        owner = false,
-        me = ctx.me
+        owner = false
       )
-      page <- renderPage(html.board.userAnalysis(data, pov))
+      page <- renderPage(views.board.userAnalysis(data, pov))
     yield Ok(page)
       .withCanonical(routes.UserAnalysis.index)
       .enforceCrossSiteIsolation
 
   def pgn(pgn: String) = Open:
     val pov         = makePov(none, Standard)
-    val orientation = get("color").flatMap(chess.Color.fromName) | pov.color
-    Ok.pageAsync:
+    val orientation = get("color").flatMap(Color.fromName) | pov.color
+    Ok.async:
       env.api.roundApi
-        .userAnalysisJson(pov, ctx.pref, none, orientation, owner = false, me = ctx.me)
-        .map { data =>
-          html.board.userAnalysis(data, pov, inlinePgn = pgn.replace("_", " ").some)
-        }
+        .userAnalysisJson(pov, ctx.pref, none, orientation, owner = false)
+        .map: data =>
+          views.board.userAnalysis(data, pov, inlinePgn = pgn.replace("_", " ").some)
     .map(_.enforceCrossSiteIsolation)
 
   private[controllers] def makePov(fen: Option[Fen.Full], variant: Variant): Pov =
@@ -89,10 +86,10 @@ final class UserAnalysis(
     )
 
   // correspondence premove aka forecast
-  def game(id: GameId, color: String) = Open:
+  def game(id: GameId, color: Color) = Open:
     Found(env.game.gameRepo.game(id)): g =>
       env.round.proxyRepo.upgradeIfPresent(g).flatMap { game =>
-        val pov = Pov(game, chess.Color.fromName(color) | White)
+        val pov = Pov(game, color)
         negotiateApi(
           html =
             if game.replayable then Redirect(routes.Round.watcher(game.id, color))
@@ -102,10 +99,10 @@ final class UserAnalysis(
                 initialFen <- env.game.gameRepo.initialFen(game.id)
                 data <-
                   env.api.roundApi
-                    .userAnalysisJson(pov, ctx.pref, initialFen, pov.color, owner = owner, me = ctx.me)
+                    .userAnalysisJson(pov, ctx.pref, initialFen, pov.color, owner = owner)
                 withForecast = owner && !pov.game.synthetic && pov.game.playable
                 page <- renderPage:
-                  html.board.userAnalysis(data, pov, withForecast = withForecast)
+                  views.board.userAnalysis(data, pov, withForecast = withForecast)
               yield Ok(page).noCache
           ,
           api = _ => mobileAnalysis(pov)
@@ -183,5 +180,5 @@ final class UserAnalysis(
     }
 
   def help = Open:
-    Ok.page:
-      lila.web.views.help.analyse(getBool("study"))
+    Ok.snip:
+      lila.web.ui.help.analyse(getBool("study"))

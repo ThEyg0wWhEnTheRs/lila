@@ -70,6 +70,8 @@
   <string name="promoteVariation">Promover variante</string>
   <string name="makeMainLine">Transformar em linha principal</string>
   <string name="deleteFromHere">Excluir a partir daqui</string>
+  <string name="collapseVariations">Esconder variantes</string>
+  <string name="expandVariations">Mostrar variantes</string>
   <string name="forceVariation">Variante forçada</string>
   <string name="copyVariationPgn">Copiar PGN da variante</string>
   <string name="move">Movimentos</string>
@@ -465,9 +467,6 @@
   <string name="safeTournamentName">Escolha um nome seguro para o torneio.</string>
   <string name="inappropriateNameWarning">Até mesmo a menor indecência poderia ensejar o encerramento de sua conta.</string>
   <string name="emptyTournamentName">Deixe em branco para dar ao torneio o nome de um grande mestre aleatório.</string>
-  <string name="recommendNotTouching">Recomendamos não mexer nisso.</string>
-  <string name="fewerPlayers">Se você restringir as condições de participação, haverá menos jogadores no torneio.</string>
-  <string name="showAdvancedSettings">Exibir configurações avançadas</string>
   <string name="makePrivateTournament">Faça o torneio privado e restrinja o acesso com uma senha</string>
   <string name="join">Entrar</string>
   <string name="withdraw">Sair</string>
@@ -507,8 +506,7 @@
   <string name="ifNoneLeaveEmpty">Se nenhuma, deixe vazio</string>
   <string name="profile">Perfil</string>
   <string name="editProfile">Editar perfil</string>
-  <string name="firstName">Primeiro nome</string>
-  <string name="lastName">Sobrenome</string>
+  <string name="realName">Nome real</string>
   <string name="setFlair">Escolha seu emote</string>
   <string name="flair">Estilo</string>
   <string name="youCanHideFlair">Você pode esconder todos os emotes de usuário no site.</string>
@@ -555,9 +553,7 @@
   <string name="reason">Motivo</string>
   <string name="whatIsIheMatter">Qual é o motivo?</string>
   <string name="cheat">Trapaça</string>
-  <string name="insult">Insulto</string>
   <string name="troll">Troll</string>
-  <string name="ratingManipulation">Manipulação de rating</string>
   <string name="other">Outro</string>
   <string name="reportDescriptionHelp">Cole o link do(s) jogo(s) e explique o que há de errado com o comportamento do usuário. Não diga apenas \"ele trapaceia\", informe-nos como chegou a esta conclusão. Sua denúncia será processada mais rapidamente se escrita em inglês.</string>
   <string name="error.provideOneCheatedGameLink">Por favor forneça ao menos um link para um jogo com suspeita de trapaça.</string>
@@ -592,6 +588,7 @@
   <string name="slow">Lento</string>
   <string name="insideTheBoard">Dentro do tabuleiro</string>
   <string name="outsideTheBoard">Fora do tabuleiro</string>
+  <string name="allSquaresOfTheBoard">Todas as casas do tabuleiro</string>
   <string name="onSlowGames">Em partidas lentas</string>
   <string name="always">Sempre</string>
   <string name="never">Nunca</string>
@@ -791,9 +788,12 @@
   <string name="transparent">Transparente</string>
   <string name="deviceTheme">Tema do dispositivo</string>
   <string name="backgroundImageUrl">URL da imagem de fundo:</string>
-  <string name="boardGeometry">Geometria do tabuleiro</string>
-  <string name="boardTheme">Estilo do tabuleiro</string>
-  <string name="boardSize">Tamanho do tabuleiro</string>
+  <string name="board">Tabuleiro</string>
+  <string name="size">Tamanho</string>
+  <string name="opacity">Opacidade</string>
+  <string name="brightness">Brilho</string>
+  <string name="hue">Tom</string>
+  <string name="boardReset">Restaurar as cores padrão</string>
   <string name="pieceSet">Estilo das peças</string>
   <string name="embedInYourWebsite">Incorporar no seu site</string>
   <string name="usernameAlreadyUsed">Este nome de usuário já está registado, por favor, escolha outro.</string>

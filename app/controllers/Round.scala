@@ -2,7 +2,6 @@ package controllers
 
 import play.api.libs.json.*
 import play.api.mvc.*
-import views.*
 
 import lila.app.{ *, given }
 import lila.chat.Chat
@@ -12,6 +11,7 @@ import lila.tournament.Tournament as Tour
 import lila.core.data.Preload
 import lila.core.id.{ GameFullId, GameAnyId }
 import lila.round.RoundGame.*
+import lila.ui.Snippet
 
 final class Round(
     env: Env,
@@ -22,7 +22,7 @@ final class Round(
     swissC: => Swiss,
     userC: => User
 ) extends LilaController(env)
-    with TheftPrevention:
+    with lila.web.TheftPrevention:
 
   import env.user.flairApi.given
 
@@ -49,7 +49,7 @@ final class Round(
                   ).tupled
                 _ = simul.foreach(env.simul.api.onPlayerConnection(pov.game, ctx.me))
                 page <- renderPage(
-                  html.round.player(
+                  views.round.player(
                     pov,
                     data,
                     tour = tour,
@@ -112,32 +112,28 @@ final class Round(
           case None =>
             Redirect(currentGame.simulId match
               case Some(simulId) => routes.Simul.show(simulId)
-              case None          => routes.Round.watcher(gameId, "white")
+              case None          => routes.Round.watcher(gameId, Color.white)
             )
   }
 
-  def watcher(gameId: GameId, color: String) = Open:
-    proxyPov(gameId, color).flatMap:
-      case Some(pov) =>
-        getUserStr("pov")
-          .map(_.id)
-          .fold(watch(pov)): requestedPov =>
-            (pov.player.userId, pov.opponent.userId) match
-              case (Some(_), Some(opponent)) if opponent == requestedPov =>
-                Redirect(routes.Round.watcher(gameId, (!pov.color).name))
-              case (Some(player), Some(_)) if player == requestedPov =>
-                Redirect(routes.Round.watcher(gameId, pov.color.name))
-              case _ => Redirect(routes.Round.watcher(gameId, "white"))
-      case None =>
-        userC
-          .tryRedirect(gameId.into(UserStr))
-          .getOrElse(challengeC.showId(gameId.into(lila.challenge.Challenge.Id)))
-
-  private def proxyPov(gameId: GameId, color: String): Fu[Option[Pov]] =
-    chess.Color
-      .fromName(color)
-      .so:
-        env.round.proxyRepo.pov(gameId, _)
+  def watcher(gameId: GameId, color: Color) = Open:
+    env.round.proxyRepo
+      .pov(gameId, color)
+      .flatMap:
+        case Some(pov) =>
+          getUserStr("pov")
+            .map(_.id)
+            .fold(watch(pov)): requestedPov =>
+              (pov.player.userId, pov.opponent.userId) match
+                case (Some(_), Some(opponent)) if opponent == requestedPov =>
+                  Redirect(routes.Round.watcher(gameId, !pov.color))
+                case (Some(player), Some(_)) if player == requestedPov =>
+                  Redirect(routes.Round.watcher(gameId, pov.color))
+                case _ => Redirect(routes.Round.watcher(gameId, Color.white))
+        case None =>
+          userC
+            .tryRedirect(gameId.into(UserStr))
+            .getOrElse(challengeC.showId(gameId.into(lila.challenge.ChallengeId)))
 
   private[controllers] def watch(pov: Pov, userTv: Option[UserModel] = None)(using
       ctx: Context
@@ -146,7 +142,7 @@ final class Round(
       case Some(player) if userTv.isEmpty => renderPlayer(pov.withColor(player.color))
       case _ if pov.game.variant == chess.variant.RacingKings && pov.color.black =>
         if userTv.isDefined then watch(!pov, userTv)
-        else Redirect(routes.Round.watcher(pov.gameId, "white"))
+        else Redirect(routes.Round.watcher(pov.gameId, Color.white))
       case _ =>
         negotiateApi(
           html =
@@ -163,7 +159,7 @@ final class Round(
                   lila.round.OnTv.User(u.id)
                 data <- env.api.roundApi.watcher(pov, users, tour, tv)
                 page <- renderPage:
-                  html.round.watcher(
+                  views.round.watcher(
                     pov,
                     data,
                     tour.map(_.tourAndTeamVs),
@@ -179,7 +175,7 @@ final class Round(
                 initialFen <- env.game.gameRepo.initialFen(pov.gameId)
                 pgn <- env.api
                   .pgnDump(pov.game, initialFen, none, lila.game.PgnDump.WithFlags(clocks = false))
-                page <- renderPage(html.round.watcher.crawler(pov, initialFen, pgn))
+                page <- renderPage(views.round.crawler(pov, initialFen, pgn))
               yield Ok(page)
           ,
           api = _ =>
@@ -222,14 +218,14 @@ final class Round(
           val hasChat = ctx.isAuth && tour.forall(tournamentC.canHaveChat(_, none))
           hasChat.so(
             env.chat.api.userChat.cached
-              .findMine(ChatId(tid))
+              .findMine(tid.into(ChatId))
               .dmap(toEventChat(s"tournament/$tid"))
           )
         case (_, Some(sid), _) =>
           env.chat.api.userChat.cached.findMine(sid.into(ChatId)).dmap(toEventChat(s"simul/$sid"))
         case (_, _, Some(sid)) =>
           env.swiss.api
-            .roundInfo(SwissId(sid))
+            .roundInfo(sid)
             .flatMapz(swissC.canHaveChat)
             .flatMapz:
               env.chat.api.userChat.cached
@@ -238,7 +234,7 @@ final class Round(
         case _ =>
           game.hasChat.so:
             for
-              chat  <- env.chat.api.playerChat.findIf(ChatId(game.id), !game.justCreated)
+              chat  <- env.chat.api.playerChat.findIf(game.id.into(ChatId), !game.justCreated)
               lines <- lila.chat.JsonView.asyncLines(chat)
             yield Chat
               .GameOrEvent:
@@ -246,8 +242,8 @@ final class Round(
                   Chat.Restricted(chat, lines, restricted = game.sourceIs(_.Lobby) && ctx.isAnon)
               .some
 
-  def sides(gameId: GameId, color: String) = Open:
-    FoundPage(proxyPov(gameId, color)): pov =>
+  def sides(gameId: GameId, color: Color) = Open:
+    FoundSnip(env.round.proxyRepo.pov(gameId, color)): pov =>
       (
         env.tournament.api.gameView.withTeamVs(pov.game),
         pov.game.simulId.so(env.simul.repo.find),
@@ -255,17 +251,13 @@ final class Round(
         env.game.crosstableApi.withMatchup(pov.game),
         env.bookmark.api.exists(pov.game, ctx.me)
       ).flatMapN: (tour, simul, initialFen, crosstable, bookmarked) =>
-        html.game.bits.sides(pov, initialFen, tour, crosstable, simul, bookmarked = bookmarked)
+        Snippet(views.game.sides(pov, initialFen, tour, crosstable, simul, bookmarked = bookmarked))
 
   def writeNote(gameId: GameId) = AuthBody { ctx ?=> me ?=>
-    import play.api.data.Forms.*
-    import play.api.data.*
-    Form(single("text" -> text))
-      .bindFromRequest()
-      .fold(
-        _ => BadRequest,
-        text => env.round.noteApi.set(gameId, me, text.trim.take(10000)).inject(NoContent)
-      )
+    bindForm(env.round.noteApi.form)(
+      _ => BadRequest,
+      text => env.round.noteApi.set(gameId, me, text.trim.take(10000)).inject(NoContent)
+    )
   }
 
   def readNote(gameId: GameId) = Auth { _ ?=> me ?=>
@@ -291,17 +283,16 @@ final class Round(
         env.round.resign(pov)
         akka.pattern.after(500.millis, env.system.scheduler)(redirection)
 
-  def mini(gameId: GameId, color: String) = Open:
-    FoundPage(
-      chess.Color
-        .fromName(color)
-        .so(env.round.proxyRepo.povIfPresent(gameId, _))
+  def mini(gameId: GameId, color: Color) = Open:
+    FoundSnip(
+      env.round.proxyRepo
+        .povIfPresent(gameId, color)
         .orElse(env.game.gameRepo.pov(gameId, color))
-    )(html.game.mini(_))
+    )(pov => Snippet(views.game.mini(pov)))
 
   def miniFullId(fullId: GameFullId) = Open:
-    FoundPage(env.round.proxyRepo.povIfPresent(fullId).orElse(env.game.gameRepo.pov(fullId))):
-      html.game.mini(_)
+    FoundSnip(env.round.proxyRepo.povIfPresent(fullId).orElse(env.game.gameRepo.pov(fullId))): pov =>
+      Snippet(views.game.mini(pov))
 
   def apiAddTime(anyId: GameAnyId, seconds: Int) = Scoped(_.Challenge.Write) { _ ?=> me ?=>
     import lila.core.round.Moretime
@@ -319,4 +310,4 @@ final class Round(
   }
 
   def help = Open:
-    Ok.page(lila.web.views.help.round)
+    Ok.snip(lila.web.ui.help.round)

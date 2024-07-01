@@ -27,7 +27,8 @@ final class StudyApi(
     lightUserApi: lila.core.user.LightUserApi,
     chatApi: lila.core.chat.ChatApi,
     serverEvalRequester: ServerEval.Requester,
-    preview: ChapterPreviewApi
+    preview: ChapterPreviewApi,
+    flairApi: lila.core.user.FlairApi
 )(using Executor, akka.stream.Materializer)
     extends lila.core.study.StudyApi:
 
@@ -95,14 +96,16 @@ final class StudyApi(
       chapterRepo.existsByStudy(study.id).flatMap {
         if _ then funit
         else
-          chapterMaker
-            .fromFenOrPgnOrBlank(
-              study,
-              ChapterMaker.Data(StudyChapterName("Chapter 1")),
-              order = 1,
-              userId = study.ownerId
-            )
-            .flatMap(chapterRepo.insert)
+          for
+            chap <- chapterMaker
+              .fromFenOrPgnOrBlank(
+                study,
+                ChapterMaker.Data(StudyChapterName("Chapter 1")),
+                order = 1,
+                userId = study.ownerId
+              )
+            _ <- chapterRepo.insert(chap)
+          yield preview.invalidate(study.id)
       }
     } >> byIdWithFirstChapter(study.id)
 
@@ -588,7 +591,7 @@ final class StudyApi(
   ): Fu[List[Chapter]] =
     data.manyGames match
       case Some(datas) =>
-        datas.traverse(addChapter(studyId, _, sticky, withRatings)(who)).map(_.flatten)
+        datas.sequentially(addChapter(studyId, _, sticky, withRatings)(who)).map(_.flatten)
       case _ =>
         sequenceStudy(studyId): study =>
           Contribute(who.u, study):
@@ -622,15 +625,14 @@ final class StudyApi(
   def importPgns(studyId: StudyId, datas: List[ChapterMaker.Data], sticky: Boolean, withRatings: Boolean)(
       who: Who
   ): Future[List[Chapter]] = datas
-    .traverse:
+    .sequentially:
       addChapter(studyId, _, sticky, withRatings)(who)
     .map(_.flatten)
 
   def doAddChapter(study: Study, chapter: Chapter, sticky: Boolean, who: Who): Funit = for
     _ <- chapterRepo.insert(chapter)
     newStudy = study.withChapter(chapter)
-    _ <- sticky.so(studyRepo.updateSomeFields(newStudy))
-    _ <- studyRepo.updateNow(study)
+    _ <- if sticky then studyRepo.updateSomeFields(newStudy) else studyRepo.updateNow(study)
   yield
     sendTo(study.id)(_.addChapter(newStudy.position, sticky, who))
     indexStudy(study)
@@ -732,7 +734,7 @@ final class StudyApi(
           } >> chapterRepo.delete(chapter.id).andDo(reloadChapters(study))
         }
 
-  def sortChapters(studyId: StudyId, chapterIds: List[StudyChapterId])(who: Who) =
+  def sortChapters(studyId: StudyId, chapterIds: List[StudyChapterId])(who: Who): Funit =
     sequenceStudy(studyId): study =>
       Contribute(who.u, study):
         chapterRepo.sort(study, chapterIds).andDo(reloadChapters(study))
@@ -773,6 +775,7 @@ final class StudyApi(
         asOwner.option(data.settings).so { settings =>
           val newStudy = study.copy(
             name = Study.toName(data.name),
+            flair = data.flair.flatMap(flairApi.find),
             settings = settings,
             visibility = data.vis,
             description = settings.description.option {
@@ -801,8 +804,7 @@ final class StudyApi(
       if v then
         studyRepo.byId(studyId).foreach {
           _.filter(_.isPublic).foreach { study =>
-            lila.common.Bus.named
-              .timeline(Propagate(StudyLike(who.u, study.id, study.name)).toFollowersOf(who.u))
+            lila.common.Bus.pub(Propagate(StudyLike(who.u, study.id, study.name)).toFollowersOf(who.u))
           }
         }
     }
@@ -821,12 +823,12 @@ final class StudyApi(
       studyId: StudyId,
       chapterId: StudyChapterId,
       userId: UserId,
-      unlimited: Boolean = false
+      official: Boolean = false
   ): Funit =
     sequenceStudyWithChapter(studyId, chapterId):
       case Study.WithChapter(study, chapter) =>
         Contribute(userId, study):
-          serverEvalRequester(study, chapter, userId, unlimited)
+          serverEvalRequester(study, chapter, userId, official)
 
   def deleteAllChapters(studyId: StudyId, by: User) =
     sequenceStudy(studyId): study =>

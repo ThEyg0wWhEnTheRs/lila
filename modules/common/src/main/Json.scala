@@ -1,8 +1,8 @@
 package lila.common
 
 import play.api.libs.json.{ Json as PlayJson, * }
-
 import scala.util.NotGiven
+import io.mola.galimatias.URL
 
 object Json:
 
@@ -18,10 +18,10 @@ object Json:
 
   given Writes[PerfKey] = pk => JsString(PerfKey.value(pk))
 
-  given Reads[LilaOpeningFamily] = Reads[LilaOpeningFamily]: f =>
-    f.get[String]("key")
-      .flatMap(LilaOpeningFamily.find)
-      .fold[JsResult[LilaOpeningFamily]](JsError(Nil))(JsSuccess(_))
+  given Writes[URL] = url => JsString(url.toString)
+
+  given [A](using Show[A]): KeyWrites[A] with
+    def writeKey(key: A) = key.show
 
   given NoJsonHandler[chess.Square] with {}
 

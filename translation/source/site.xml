@@ -70,6 +70,8 @@
   <string name="promoteVariation">Promote variation</string>
   <string name="makeMainLine">Make mainline</string>
   <string name="deleteFromHere">Delete from here</string>
+  <string name="collapseVariations">Collapse variations</string>
+  <string name="expandVariations">Expand variations</string>
   <string name="forceVariation">Force variation</string>
   <string name="copyVariationPgn">Copy variation PGN</string>
   <string name="move">Move</string>
@@ -465,9 +467,6 @@
   <string name="safeTournamentName">Pick a very safe name for the tournament.</string>
   <string name="inappropriateNameWarning">Anything even slightly inappropriate could get your account closed.</string>
   <string name="emptyTournamentName">Leave empty to name the tournament after a notable chess player.</string>
-  <string name="recommendNotTouching">We recommend not touching these.</string>
-  <string name="fewerPlayers">If you set entry requirements, your tournament will have fewer players.</string>
-  <string name="showAdvancedSettings">Show advanced settings</string>
   <string name="makePrivateTournament">Make the tournament private, and restrict access with a password</string>
   <string name="join">Join</string>
   <string name="withdraw">Withdraw</string>
@@ -507,8 +506,7 @@
   <string name="ifNoneLeaveEmpty">If none, leave empty</string>
   <string name="profile">Profile</string>
   <string name="editProfile">Edit profile</string>
-  <string name="firstName">First name</string>
-  <string name="lastName">Surname</string>
+  <string name="realName">Real name</string>
   <string name="setFlair">Set your flair</string>
   <string name="flair">Flair</string>
   <string name="youCanHideFlair">There is a setting to hide all user flairs across the entire site.</string>
@@ -555,9 +553,7 @@
   <string name="reason">Reason</string>
   <string name="whatIsIheMatter">What's the matter?</string>
   <string name="cheat">Cheat</string>
-  <string name="insult">Insult</string>
   <string name="troll">Troll</string>
-  <string name="ratingManipulation">Rating manipulation</string>
   <string name="other">Other</string>
   <string name="reportDescriptionHelp">Paste the link to the game(s) and explain what is wrong about this user's behaviour. Don't just say "they cheat", but tell us how you came to this conclusion. Your report will be processed faster if written in English.</string>
   <string name="error.provideOneCheatedGameLink">Please provide at least one link to a cheated game.</string>
@@ -592,6 +588,7 @@
   <string name="slow">Slow</string>
   <string name="insideTheBoard">Inside the board</string>
   <string name="outsideTheBoard">Outside the board</string>
+  <string name="allSquaresOfTheBoard">All squares of the board</string>
   <string name="onSlowGames">On slow games</string>
   <string name="always">Always</string>
   <string name="never">Never</string>
@@ -791,9 +788,12 @@
   <string name="transparent">Transparent</string>
   <string name="deviceTheme">Device theme</string>
   <string name="backgroundImageUrl">Background image URL:</string>
-  <string name="boardGeometry">Board geometry</string>
-  <string name="boardTheme">Board theme</string>
-  <string name="boardSize">Board size</string>
+  <string name="board">Board</string>
+  <string name="size">Size</string>
+  <string name="opacity">Opacity</string>
+  <string name="brightness">Brightness</string>
+  <string name="hue">Hue</string>
+  <string name="boardReset">Reset colours to default</string>
   <string name="pieceSet">Piece set</string>
   <string name="embedInYourWebsite">Embed in your website</string>
   <string name="usernameAlreadyUsed">This username is already in use, please try another one.</string>
@@ -934,8 +934,7 @@
   <string name="cancelTournament">Cancel the tournament</string>
   <string name="tournDescription">Tournament description</string>
   <string name="tournDescriptionHelp">Anything special you want to tell the participants? Try to keep it short. Markdown links are available: [name](https://url)</string>
-  <string name="ratedFormHelp">Games are rated
-and impact players ratings</string>
+  <string name="ratedFormHelp">Games are rated and impact players ratings</string>
   <string name="onlyMembersOfTeam">Only members of team</string>
   <string name="noRestriction">No restriction</string>
   <string name="minimumRatedGames">Minimum rated games</string>
@@ -946,7 +945,7 @@ It only works for standard games, not with variants.
 You can use the %s to generate a FEN position, then paste it here.
 Leave empty to start games from the normal initial position.</string>
   <string name="cancelSimul">Cancel the simul</string>
-  <string name="simulHostcolor">Host color for each game</string>
+  <string name="simulHostcolor">Host colour for each game</string>
   <string name="estimatedStart">Estimated start time</string>
   <string name="simulFeatured">Feature on %s</string>
   <string name="simulFeaturedHelp">Show your simul to everyone on %s. Disable for private simuls.</string>

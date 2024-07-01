@@ -8,7 +8,7 @@ export default function (ctrl: PuzzleCtrl): VNode {
   return h('div.cg-wrap', {
     hook: {
       insert: vnode => ctrl.setChessground(site.makeChessground(vnode.elm as HTMLElement, makeConfig(ctrl))),
-      destroy: () => ctrl.ground()!.destroy(),
+      destroy: () => ctrl.ground().destroy(),
     },
   });
 }
@@ -22,6 +22,7 @@ export function makeConfig(ctrl: PuzzleCtrl): CgConfig {
     check: opts.check,
     lastMove: opts.lastMove,
     coordinates: ctrl.pref.coords !== Prefs.Coords.Hidden,
+    coordinatesOnSquares: ctrl.pref.coords === Prefs.Coords.All,
     addPieceZIndex: ctrl.pref.is3d,
     addDimensionsCssVarsTo: document.body,
     movable: {

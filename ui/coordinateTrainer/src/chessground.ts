@@ -10,6 +10,10 @@ export default function (ctrl: CoordinateTrainerCtrl): VNode {
       insert: vnode => {
         const el = vnode.elm as HTMLElement;
         ctrl.chessground = site.makeChessground(el, makeConfig(ctrl));
+        site.pubsub.on('board.change', (is3d: boolean) => {
+          ctrl.chessground!.state.addPieceZIndex = is3d;
+          ctrl.chessground!.redrawAll();
+        });
       },
       destroy: () => ctrl.chessground!.destroy(),
     },
@@ -22,6 +26,7 @@ function makeConfig(ctrl: CoordinateTrainerCtrl): CgConfig {
     orientation: ctrl.orientation,
     blockTouchScroll: true,
     coordinates: ctrl.showCoordinates(),
+    coordinatesOnSquares: ctrl.showCoordsOnAllSquares(),
     addPieceZIndex: ctrl.config.is3d,
     movable: { free: false, color: undefined },
     drawable: { enabled: false },

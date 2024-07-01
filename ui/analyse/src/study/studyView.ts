@@ -127,7 +127,10 @@ function metadata(ctrl: StudyCtrl): VNode {
     title = `${d.name}: ${ctrl.currentChapter().name}`;
   return h('div.study__metadata', [
     h('h2', [
-      h('span.name', { attrs: { title } }, title),
+      h('span.name', { attrs: { title } }, [
+        d.flair && h('img.icon-flair', { attrs: { src: site.asset.flairSrc(d.flair) } }),
+        title,
+      ]),
       h(
         'span.liking.text',
         {
@@ -169,8 +172,7 @@ export function side(ctrl: StudyCtrl, withSearch: boolean): VNode {
 
   const tabs = h('div.tabs-horiz', { attrs: { role: 'tablist' } }, [
     chaptersTab,
-    (ctrl.members.canContribute() || ctrl.data.admin) &&
-      makeTab('members', ctrl.trans.pluralSame('nbMembers', ctrl.members.size())),
+    ctrl.members.size() > 0 && makeTab('members', ctrl.trans.pluralSame('nbMembers', ctrl.members.size())),
     withSearch &&
       h('span.search.narrow', {
         attrs: { ...dataIcon(licon.Search), title: 'Search' },
@@ -197,7 +199,7 @@ export function contextMenu(ctrl: StudyCtrl, path: Tree.Path, node: Tree.Node): 
             attrs: dataIcon(licon.BubbleSpeech),
             hook: bind('click', () => {
               ctrl.vm.toolTab('comments');
-              ctrl.commentForm.start(ctrl.currentChapter()!.id, path, node);
+              ctrl.commentForm.start(ctrl.currentChapter().id, path, node);
             }),
           },
           ctrl.trans.noarg('commentThisMove'),

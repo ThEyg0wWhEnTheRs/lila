@@ -10,9 +10,13 @@ import scala.util.matching.Regex
 import lila.core.config.*
 import lila.memo.SettingStore
 import lila.memo.SettingStore.Formable.given
+import lila.relay.RelayTour.ActiveWithSomeRounds
+import scalalib.paginator.Paginator
+import lila.relay.RelayTour.WithLastRound
 
 @Module
 final class Env(
+    config: play.api.Configuration,
     ws: StandaloneWSClient,
     db: lila.db.Db,
     yoloDb: lila.db.AsyncDb @@ lila.db.YoloDb,
@@ -58,6 +62,8 @@ final class Env(
 
   lazy val listing: RelayListing = wire[RelayListing]
 
+  lazy val stats = wire[RelayStatsApi]
+
   lazy val api: RelayApi = wire[RelayApi]
 
   lazy val tourStream: RelayTourStream = wire[RelayTourStream]
@@ -73,6 +79,12 @@ final class Env(
   lazy val teamTable = wire[RelayTeamTable]
 
   lazy val playerTour = wire[RelayPlayerTour]
+
+  def top(page: Int): Fu[(List[ActiveWithSomeRounds], List[WithLastRound], Paginator[WithLastRound])] = for
+    active   <- (page == 1).so(listing.active.get({}))
+    upcoming <- (page == 1).so(listing.upcoming.get({}))
+    past     <- pager.inactive(page)
+  yield (active, upcoming, past)
 
   private lazy val sync = wire[RelaySync]
 
@@ -105,6 +117,9 @@ final class Env(
 
   private val relayFidePlayerApi = wire[RelayFidePlayerApi]
 
+  import lila.common.config.given
+  private val syncOnlyIds = config.getOptional[List[String]]("relay.syncOnlyIds").map(RelayTourId.from)
+
   // start the sync scheduler
   wire[RelayFetch]
 
@@ -128,7 +143,7 @@ final class Env(
       api.becomeStudyAdmin(studyId, me)
     },
     "isOfficialRelay" -> { case lila.study.actorApi.IsOfficialRelay(studyId, promise) =>
-      promise.completeWith(api.isOfficial(studyId))
+      promise.completeWith(api.isOfficial(studyId.into(RelayRoundId)))
     }
   )
 
@@ -137,6 +152,7 @@ private class RelayColls(mainDb: lila.db.Db, yoloDb: lila.db.AsyncDb @@ lila.db.
   val tour  = mainDb(CollName("relay_tour"))
   val group = mainDb(CollName("relay_group"))
   val delay = yoloDb(CollName("relay_delay"))
+  val stats = mainDb(CollName("relay_stats"))
 
 private trait ProxyCredentials
 private trait ProxyHostPort

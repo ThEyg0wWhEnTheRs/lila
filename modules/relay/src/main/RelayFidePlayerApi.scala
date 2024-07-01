@@ -24,15 +24,13 @@ final private class RelayFidePlayerApi(guessPlayer: lila.core.fide.GuessPlayer)(
         update(tags, tc, _)
 
   private def guessTimeControl(tour: RelayTour): Option[FideTC] =
-    tour.description
-      .split('|')
-      .lift(2)
+    tour.info.tc
       .map(_.trim.toLowerCase.replace("classical", "standard"))
       .so: tcStr =>
         FideTC.values.find(tc => tcStr.contains(tc.toString))
 
   private def update(tags: Tags, tc: FideTC, fidePlayers: ByColor[Option[Player]]): Tags =
-    chess.Color.all.foldLeft(tags): (tags, color) =>
+    Color.all.foldLeft(tags): (tags, color) =>
       tags ++ Tags:
         fidePlayers(color).so: fide =>
           List(

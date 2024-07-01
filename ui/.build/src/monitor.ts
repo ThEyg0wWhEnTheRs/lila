@@ -4,7 +4,9 @@ import * as ps from 'node:process';
 import { build, stop } from './build';
 import { env } from './main';
 import { globArray } from './parse';
+import { clean } from './clean';
 import { stopTsc, tsc } from './tsc';
+import { stopEsbuild, esbuild } from './esbuild';
 
 const watchers: fs.FSWatcher[] = [];
 
@@ -26,9 +28,12 @@ export async function startMonitor(mods: string[]) {
   const tscChange = (t: any) => {
     if (reinitTimeout) return;
     stopTsc();
+    stopEsbuild();
     clearTimeout(tscTimeout);
     tscTimeout = setTimeout(() => {
-      if (!reinitTimeout) tsc();
+      if (reinitTimeout) return;
+      clean(['ui/*/tsconfig.tsbuildinfo']);
+      esbuild(tsc());
     }, 2000);
   };
   const packageChange = async () => {

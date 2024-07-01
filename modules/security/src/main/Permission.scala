@@ -34,6 +34,7 @@ object Permission:
       CloseAccount,
       GdprErase,
       SetTitle,
+      TitleRequest,
       SetEmail
     ),
     "Misc mod" -> List(
@@ -103,5 +104,7 @@ object Permission:
     val level2 = level1.flatMap(_.alsoGrants)
     level0 ++ level1 ++ level2
 
-  def findGranterPackage(perms: Set[Permission], perm: Permission): Option[Permission] =
-    (!perms(perm)).so(perms.find(_.grants(perm)))
+  val form =
+    import play.api.data.Form
+    import play.api.data.Forms.*
+    Form(single("permissions" -> list(text.verifying(allByDbKey.contains))))

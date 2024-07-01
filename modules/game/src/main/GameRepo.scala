@@ -69,9 +69,6 @@ final class GameRepo(c: Coll)(using Executor) extends lila.core.game.GameRepo(c)
   def pov(gameId: GameId, color: Color): Fu[Option[Pov]] =
     game(gameId).dmap2 { Pov(_, color) }
 
-  def pov(gameId: GameId, color: String): Fu[Option[Pov]] =
-    Color.fromName(color).so(pov(gameId, _))
-
   def pov(playerRef: PlayerRef): Fu[Option[Pov]] =
     game(playerRef.gameId).dmap { _.flatMap { _.playerIdPov(playerRef.playerId) } }
 
@@ -475,9 +472,8 @@ final class GameRepo(c: Coll)(using Executor) extends lila.core.game.GameRepo(c)
     initialFen(game).dmap { WithInitialFen(game, _) }
 
   def withInitialFens(games: List[Game]): Fu[List[(Game, Option[Fen.Full])]] =
-    games.map { game =>
+    games.parallel: game =>
       initialFen(game).dmap { game -> _ }
-    }.parallel
 
   def count(query: Query.type => Bdoc): Fu[Int]    = coll.countSel(query(Query))
   def countSec(query: Query.type => Bdoc): Fu[Int] = coll.secondaryPreferred.countSel(query(Query))

@@ -46,7 +46,7 @@ final class ChallengeApi(
     doCreate(c).andDo(me.foreach(me => openCreatedBy.put(c.id, me))).inject(c)
 
   private val openCreatedBy =
-    cacheApi.notLoadingSync[Id, UserId](512, "challenge.open.by"):
+    cacheApi.notLoadingSync[ChallengeId, UserId](32, "challenge.open.by"):
       _.expireAfterWrite(1 hour).build()
 
   private def doCreate(c: Challenge) =
@@ -56,13 +56,13 @@ final class ChallengeApi(
         uncacheAndNotify(c)
         Bus.publish(lila.core.challenge.Event.Create(c), "challenge")
 
-  def isOpenBy(id: Id, maker: User) = openCreatedBy.getIfPresent(id).contains(maker.id)
+  def isOpenBy(id: ChallengeId, maker: User) = openCreatedBy.getIfPresent(id).contains(maker.id)
 
   export repo.byId
 
-  def activeByIdFor(id: Id, dest: User): Future[Option[Challenge]] =
+  def activeByIdFor(id: ChallengeId, dest: User): Future[Option[Challenge]] =
     repo.byIdFor(id, dest).dmap(_.filter(_.active))
-  def activeByIdBy(id: Id, maker: User): Future[Option[Challenge]] =
+  def activeByIdBy(id: ChallengeId, maker: User): Future[Option[Challenge]] =
     repo
       .byId(id)
       .dmap(_.filter { c =>
@@ -92,7 +92,7 @@ final class ChallengeApi(
 
   private def offline(c: Challenge) = repo.offline(c).andDo(uncacheAndNotify(c))
 
-  private[challenge] def ping(id: Id): Funit =
+  private[challenge] def ping(id: ChallengeId): Funit =
     repo
       .statusById(id)
       .flatMap:
@@ -116,7 +116,7 @@ final class ChallengeApi(
   def accept(
       c: Challenge,
       sid: Option[String],
-      requestedColor: Option[chess.Color] = None
+      requestedColor: Option[Color] = None
   )(using me: Option[Me]): Fu[Either[String, Option[Pov]]] =
     acceptQueue:
       def withPerf = me.map(_.value).soFu(userApi.withPerf(_, c.perfType))
@@ -133,7 +133,7 @@ final class ChallengeApi(
           me      <- me
           open    <- c.open
           userIds <- open.userIds
-        yield chess.Color.fromWhite(me.is(userIds._1))
+        yield Color.fromWhite(me.is(userIds._1))
         val color = openFixedColor.orElse(requestedColor)
         if c.challengerIsOpen
         then
@@ -178,25 +178,22 @@ final class ChallengeApi(
     Bus.publish(lila.core.challenge.Event.Create(challenge), "challenge")
 
   def removeByUserId(userId: UserId): Funit =
-    repo.allWithUserId(userId).flatMap(_.traverse_(remove)).void
+    repo.allWithUserId(userId).flatMap(_.sequentiallyVoid(remove))
 
   def removeByGameId(gameId: GameId): Funit =
-    repo.byId(gameId.into(Id)).flatMap(_.so(remove))
+    repo.byId(gameId.into(ChallengeId)).flatMap(_.so(remove))
 
   private def isLimitedByMaxPlaying(c: Challenge) =
     if c.clock.isEmpty then fuFalse
     else
-      c.userIds
-        .map: userId =>
-          gameCache.nbPlaying(userId).dmap(lila.core.game.maxPlaying <= _)
-        .parallel
-        .dmap(_.exists(identity))
+      c.userIds.existsM: userId =>
+        gameCache.nbPlaying(userId).dmap(lila.core.game.maxPlaying <= _)
 
   private[challenge] def sweep: Funit =
     repo
       .realTimeUnseenSince(nowInstant.minusSeconds(20), max = 50)
-      .flatMap(_.traverse_(offline)) >>
-      repo.expired(50).flatMap(_.traverse_(remove))
+      .flatMap(_.sequentiallyVoid(offline)) >>
+      repo.expired(50).flatMap(_.sequentiallyVoid(remove))
 
   private def remove(c: Challenge) =
     repo.remove(c.id).andDo(uncacheAndNotify(c))
@@ -207,7 +204,7 @@ final class ChallengeApi(
     c.challengerUserId.foreach(notifyUser.apply)
     socketReload(c.id)
 
-  private def socketReload(id: Id): Unit =
+  private def socketReload(id: ChallengeId): Unit =
     socket.foreach(_.reload(id))
 
   private object notifyUser:

@@ -9,6 +9,7 @@ import lila.chat.{ GetLinkCheck, IsChatFresh }
 import lila.common.Bus
 import lila.common.config.*
 import lila.core.misc.lpv.*
+import lila.core.id.CmsPageKey
 
 @Module
 final class Env(
@@ -82,8 +83,6 @@ final class Env(
 
   lazy val gameApiV2 = wire[GameApiV2]
 
-  lazy val userGameApi = wire[UserGameApi]
-
   lazy val roundApi = wire[RoundApi]
 
   lazy val lobbyApi = wire[LobbyApi]
@@ -94,17 +93,10 @@ final class Env(
 
   lazy val accountClosure = wire[AccountClosure]
 
-  lazy val forumAccess = wire[ForumAccess]
-
   lazy val cli = wire[Cli]
 
   private lazy val linkCheck = wire[LinkCheck]
   lazy val chatFreshness     = wire[ChatFreshness]
-
-  import lila.cms.CmsPage
-  def cmsRender(key: CmsPage.Key)(using ctx: Context): Fu[Option[CmsPage.Render]] =
-    cmsApi.render(key)(ctx.req, ctx.lang)
-  def cmsRenderKey(key: String)(using Context) = cmsRender(CmsPage.Key(key))
 
   Bus.subscribeFuns(
     "chatLinkCheck" -> { case GetLinkCheck(line, source, promise) =>

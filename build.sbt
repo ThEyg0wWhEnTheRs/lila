@@ -16,6 +16,7 @@ lazy val root = Project("lila", file("."))
 organization         := "org.lichess"
 Compile / run / fork := true
 javaOptions ++= Seq("-Xms64m", "-Xmx512m", "-Dlogger.file=conf/logger.dev.xml")
+ThisBuild / usePipelining := false
 // shorter prod classpath
 scriptClasspath             := Seq("*")
 Compile / resourceDirectory := baseDirectory.value / "conf"
@@ -76,7 +77,7 @@ lazy val modules = Seq(
   swiss, insight, fishnet, tutor, mod, challenge, web,
   team, forum, streamer, simul, activity, msg, ublog,
   notifyModule, clas, perfStat, opening, timeline,
-  setup, video, fide, push,
+  setup, video, fide, title, push,
   // and then the smaller ones
   pool, lobby, relation, tv, coordinate, feed, history,
   shutup, appeal, irc, explorer, learn, event, coach,
@@ -135,12 +136,12 @@ lazy val rating = module("rating",
 ).dependsOn(common % "test->test")
 
 lazy val cms = module("cms",
-  Seq(memo, coreI18n),
+  Seq(memo, ui),
   Seq()
 )
 
 lazy val puzzle = module("puzzle",
-  Seq(coreI18n, tree, memo, rating),
+  Seq(tree, memo, rating),
   tests.bundle
 )
 
@@ -155,7 +156,7 @@ lazy val racer = module("racer",
 )
 
 lazy val video = module("video",
-  Seq(memo),
+  Seq(memo, ui),
   macwire.bundle
 )
 
@@ -170,17 +171,17 @@ lazy val streamer = module("streamer",
 )
 
 lazy val coordinate = module("coordinate",
-  Seq(db),
+  Seq(db, ui),
   macwire.bundle
 )
 
 lazy val feed = module("feed",
-  Seq(memo),
+  Seq(memo, ui),
   Seq()
 )
 
 lazy val ublog = module("ublog",
-  Seq(coreI18n, memo),
+  Seq(memo, ui),
   Seq(bloomFilter)
 )
 
@@ -190,7 +191,7 @@ lazy val evaluation = module("evaluation",
 )
 
 lazy val perfStat = module("perfStat",
-  Seq(ui, memo, rating),
+  Seq(memo, rating),
   Seq()
 )
 
@@ -201,7 +202,7 @@ lazy val history = module("history",
 
 lazy val search = module("search",
   Seq(common),
-  playWs.bundle
+  Seq(playWs.ahc, lilaSearch)
 )
 
 lazy val chat = module("chat",
@@ -215,12 +216,12 @@ lazy val room = module("room",
 )
 
 lazy val timeline = module("timeline",
-  Seq(memo),
+  Seq(memo, ui),
   Seq()
 )
 
 lazy val event = module("event",
-  Seq(memo, coreI18n),
+  Seq(memo, ui),
   Seq()
 )
 
@@ -240,9 +241,10 @@ lazy val game = module("game",
 )
 
 lazy val gameSearch = module("gameSearch",
-  Seq(coreI18n, search),
-  Seq()
+  Seq(search, ui),
+  tests.bundle
 )
+
  // good dep to game
 lazy val tv = module("tv",
   Seq(game),
@@ -255,7 +257,7 @@ lazy val bot = module("bot",
 )
 
 lazy val analyse = module("analyse",
-  Seq(coreI18n, tree, memo),
+  Seq(tree, memo, ui),
   tests.bundle
 )
 
@@ -265,7 +267,7 @@ lazy val round = module("round",
 )
 
 lazy val pool = module("pool",
-  Seq(coreI18n, db, rating),
+  Seq(db, rating),
   Seq()
 )
 
@@ -290,12 +292,12 @@ lazy val insight = module("insight",
 )
 
 lazy val tutor = module("tutor",
-  Seq(insight, ui),
+  Seq(insight),
   tests.bundle
 )
 
 lazy val opening = module("opening",
-  Seq(coreI18n, memo),
+  Seq(memo, ui),
   tests.bundle
 )
 
@@ -305,7 +307,7 @@ lazy val gathering = module("gathering",
 )
 
 lazy val tournament = module("tournament",
-  Seq(gathering, room, memo, ui),
+  Seq(gathering, room, memo),
   Seq(lettuce) ++ tests.bundle
 )
 
@@ -330,7 +332,7 @@ lazy val irwin = module("irwin",
 )
 
 lazy val oauth = module("oauth",
-  Seq(memo, coreI18n),
+  Seq(memo, ui),
   Seq()
 )
 
@@ -345,17 +347,22 @@ lazy val shutup = module("shutup",
 )
 
 lazy val challenge = module("challenge",
-  Seq(game, room, oauth, ui),
+  Seq(game, room, oauth),
   Seq(lettuce) ++ tests.bundle
 )
 
 lazy val fide = module("fide",
-  Seq(memo),
+  Seq(memo, ui),
+  Seq()
+)
+
+lazy val title = module("title",
+  Seq(memo, ui),
   Seq()
 )
 
 lazy val study = module("study",
-  Seq(coreI18n, tree, memo, room),
+  Seq(tree, memo, room, ui),
   Seq(lettuce) ++ tests.bundle ++ Seq(scalacheck, munitCheck, chess.testKit)
 ).dependsOn(common % "test->test")
 
@@ -386,7 +393,7 @@ lazy val practice = module("practice",
 
 lazy val playban = module("playban",
   Seq(memo),
-  Seq()
+  tests.bundle
 )
 
 lazy val push = module("push",
@@ -405,17 +412,17 @@ lazy val mailer = module("mailer",
 )
 
 lazy val plan = module("plan",
-  Seq(coreI18n, memo),
+  Seq(memo, ui),
   tests.bundle
 )
 
 lazy val relation = module("relation",
-  Seq(memo),
+  Seq(memo, ui),
   Seq()
 )
 
 lazy val pref = module("pref",
-  Seq(coreI18n, memo),
+  Seq(memo, ui),
   Seq()
 )
 
@@ -425,7 +432,7 @@ lazy val msg = module("msg",
 )
 
 lazy val forum = module("forum",
-  Seq(memo),
+  Seq(memo, ui),
   Seq()
 )
 
@@ -435,7 +442,7 @@ lazy val forumSearch = module("forumSearch",
 )
 
 lazy val team = module("team",
-  Seq(memo, room),
+  Seq(memo, room, ui),
   Seq()
 )
 

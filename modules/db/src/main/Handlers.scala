@@ -150,7 +150,7 @@ trait Handlers:
   given BSONHandler[Relation] =
     BSONBooleanHandler.as[Relation](if _ then Relation.Follow else Relation.Block, _.isFollow)
 
-  given BSONHandler[chess.Color] = BSONBooleanHandler.as[chess.Color](chess.Color.fromWhite(_), _.white)
+  given BSONHandler[Color] = BSONBooleanHandler.as[Color](Color.fromWhite(_), _.white)
 
   import lila.common.{ LilaOpeningFamily, SimpleOpening }
   given BSONHandler[SimpleOpening] = tryHandler[SimpleOpening](
@@ -221,6 +221,14 @@ trait Handlers:
     { case BSONString(t) => PlayerTitle.get(t).toTry(s"No such player title: $t") },
     t => BSONString(t.value)
   )
+
+  given BSONHandler[io.mola.galimatias.URL] =
+    import io.mola.galimatias.{ StrictErrorHandler, URL, URLParsingSettings }
+    val parser = URLParsingSettings.create.withErrorHandler(StrictErrorHandler.getInstance)
+    tryHandler(
+      { case BSONString(url) => Try(URL.parse(parser, url)) },
+      t => BSONString(t.toString)
+    )
 
   import lila.core.user.UserMark
   given markHandler: BSONHandler[UserMark] = valueMapHandler(UserMark.byKey)(_.key)

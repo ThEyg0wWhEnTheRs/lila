@@ -44,7 +44,7 @@
   <string name="unlike">نمی پسندم</string>
   <string name="newTag">برچسب جدید</string>
   <string name="commentThisPosition">نظر دادن به این پوزیسیون</string>
-  <string name="commentThisMove">نظر دادن به این حرکت</string>
+  <string name="commentThisMove">قرار دادن توضیحات برای این حرکت</string>
   <string name="annotateWithGlyphs">حرکت‌نویسی به‌همراه علائم</string>
   <string name="theChapterIsTooShortToBeAnalysed">این فصل برای تحلیل شدن بسیار کوتاه است.</string>
   <string name="onlyContributorsCanRequestAnalysis">تنها مشارکت کنندگان این درس میتوانند درخواست تحلیل کامپیوتری دهند.</string>
@@ -58,20 +58,19 @@
   <string name="previous">پیشین</string>
   <string name="next">بعدی</string>
   <string name="last">آخرین</string>
-  <string name="shareAndExport">اشتراک &amp; صدور</string>
+  <string name="shareAndExport">همرسانی و برون‏بُرد</string>
   <string name="cloneStudy">نمونه سازی</string>
   <string name="studyPgn">PGN درس</string>
   <string name="downloadAllGames">بارگیری تمام بازی ها</string>
   <string name="chapterPgn">PGN فصل</string>
   <string name="copyChapterPgn">کپی کردن PGN</string>
-  <string name="copyChapterPgnDescription">کپی کردن فصل PGN.</string>
   <string name="downloadGame">بارگیری بازی</string>
-  <string name="studyUrl">URL درس</string>
-  <string name="currentChapterUrl">URL فصل فعلی</string>
+  <string name="studyUrl">وب‌نشانی مطالعه</string>
+  <string name="currentChapterUrl">وب‌نشانی فصل جاری</string>
   <string name="youCanPasteThisInTheForumToEmbed">برای جاسازی این نوشته، این کد را در تالار گفت و گو قرار دهید</string>
   <string name="startAtInitialPosition">در موقعیت آغازین شروع نمایید</string>
   <string name="startAtX">شروع از %s</string>
-  <string name="embedInYourWebsite">در وبسایت یا وبلاگ خود قرار دهید</string>
+  <string name="embedInYourWebsite">در وبگاهتان قرار دهید</string>
   <string name="readMoreAboutEmbedding">درباره قرار دادن (در سایت) بیشتر بخوانید</string>
   <string name="onlyPublicStudiesCanBeEmbedded">فقط مطالعاتِ عمومی می‌توانند جایگذاری شوند!</string>
   <string name="open">بگشایید</string>
@@ -85,7 +84,7 @@
   <string name="pinnedChapterComment">نظر سنجاق شده درباره فصل</string>
   <string name="saveChapter">ذخیره فصل</string>
   <string name="clearAnnotations">پاک کردن حرکت‌نویسی</string>
-  <string name="clearVariations" comment="Clear is used as a verb here. This erases the variations in the study (https://lichess.org/study) you are preparing.">پاک کردن تغییرات</string>
+  <string name="clearVariations">پاک کردن تغییرات</string>
   <string name="deleteChapter">حذف فصل</string>
   <string name="deleteThisChapter">آیا میخواهید این فصل را پاک کنید؟امکان برگرداندن آن وجود ندارد!</string>
   <string name="clearAllCommentsInThisChapter">همه دیدگاه‌ها، نمادها و شکل‌های ترسیم شده در این بخش، پاک شوند</string>
@@ -99,7 +98,7 @@
   <string name="startFromInitialPosition">از موقعیت ابتدایی شروع نمایید</string>
   <string name="editor">ویرایشگر</string>
   <string name="startFromCustomPosition">از موقعیت دلخواه شروع نمایید</string>
-  <string name="loadAGameByUrl">بارگزاری بازی با استفاده از URL</string>
+  <string name="loadAGameByUrl">بارگذاری بازی از وب‌نشانی‌ها</string>
   <string name="loadAPositionFromFen">از FEN یک موقعیت را بارگیری کنید</string>
   <string name="loadAGameFromPgn">باگذاری بازی با استفاده از فایل PGN</string>
   <string name="automatic">خودکار</string>
@@ -107,7 +106,7 @@
     <item quantity="one">متن PGN خود را در اینجا بچسبانید، تا %s بازی</item>
     <item quantity="other">متن PGN خود را در اینجا بچسبانید، تا %s بازی</item>
   </plurals>
-  <string name="urlOfTheGame">آدرس اینترنتی بازی، یکی در هر خط</string>
+  <string name="urlOfTheGame">وب‌نشانی بازی‌ها، یکی در هر خط</string>
   <string name="loadAGameFromXOrY">بازی‌ها را از %1$s یا %2$s بارگذاری نمایید</string>
   <string name="createChapter">ساخت فصل</string>
   <string name="createStudy">مطالعه ایجاد کنید</string>
@@ -158,7 +157,7 @@
   <string name="withCompensation" comment="withCompensation&#10;&#10;Compensation is the short-term positional advantage a player has in exchange for typically material disadvantage. Short term advantages involve initiative and attack.&#10;https://en.wikipedia.org/wiki/Compensation_(chess)">دارای مزیت و برتری</string>
   <string name="withTheIdea" comment="withTheIdea&#10;A label that can be applied to a position in a Lichess study. Noun.&#10;&#10;Shows that the player was following the theory around an opening, even after the initial opening moves.">با ایده</string>
   <string name="nextChapter">فصل بعدی</string>
-  <string name="prevChapter">فصل قبلی</string>
+  <string name="prevChapter">فصل پیشین</string>
   <string name="studyActions">عملگرهای مطالعه</string>
   <string name="topics">مباحث</string>
   <string name="myTopics">مباحث من</string>

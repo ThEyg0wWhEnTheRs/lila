@@ -10,7 +10,6 @@ import lila.core.LightUser
 import lila.game.JsonView.given
 import lila.pref.Pref
 import lila.round.RoundGame.*
-import lila.game.GameExt.playerById
 
 object RoundMobile:
 
@@ -40,7 +39,7 @@ final class RoundMobile(
     gameSockets
       .flatMap: gs =>
         Pov(gs.game, me).map(_ -> gs.socket)
-      .traverse: (pov, socket) =>
+      .parallel: (pov, socket) =>
         online(pov.game, pov.fullId.anyId, socket)
       .map(JsArray(_))
 

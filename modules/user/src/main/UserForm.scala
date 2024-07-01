@@ -5,7 +5,16 @@ import play.api.data.*
 import play.api.data.Forms.*
 import play.api.data.validation.Constraints
 
-import lila.common.Form.{ cleanNonEmptyText, cleanText, into, trim, given }
+import lila.common.Form.{
+  cleanNonEmptyText,
+  cleanText,
+  cleanNoSymbolsText,
+  cleanNoSymbolsAndNonEmptyText,
+  playerTitle,
+  into,
+  trim,
+  given
+}
 import lila.common.LameName
 import lila.core.user.Profile
 
@@ -31,25 +40,22 @@ final class UserForm:
   val profile: Form[Profile] = Form:
     mapping(
       "flag"       -> optional(text.verifying(Flags.codeSet contains _)),
-      "location"   -> optional(cleanNonEmptyText(maxLength = 80)),
-      "bio"        -> optional(cleanNonEmptyText(maxLength = 400)),
-      "firstName"  -> nameField,
-      "lastName"   -> nameField,
+      "location"   -> optional(cleanNoSymbolsAndNonEmptyText(maxLength = 80)),
+      "bio"        -> optional(cleanNoSymbolsAndNonEmptyText(maxLength = 400)),
+      "realName"   -> optional(cleanNoSymbolsText(minLength = 1, maxLength = 100)),
       "fideRating" -> optional(number(min = 1400, max = 3000)),
       "uscfRating" -> optional(number(min = 100, max = 3000)),
       "ecfRating"  -> optional(number(min = 0, max = 3000)),
       "rcfRating"  -> optional(number(min = 0, max = 3000)),
       "cfcRating"  -> optional(number(min = 0, max = 3000)),
       "dsbRating"  -> optional(number(min = 0, max = 3000)),
-      "links"      -> optional(cleanNonEmptyText(maxLength = 3000))
+      "links"      -> optional(cleanNoSymbolsAndNonEmptyText(maxLength = 3000))
     )(Profile.apply)(unapply)
 
   def profileOf(user: User) = profile.fill(user.profileOrDefault)
 
   def flair(using Me) = Form[Option[Flair]]:
     single(FlairApi.formPair())
-
-  private def nameField = optional(cleanText(minLength = 1, maxLength = 20))
 
 object UserForm:
 
@@ -71,4 +77,4 @@ object UserForm:
   case class NoteData(text: String, mod: Boolean, dox: Boolean)
 
   val title = Form:
-    single("title" -> of[String].transform[Option[PlayerTitle]](PlayerTitle.get, _.so(_.value)))
+    single("title" -> optional(playerTitle.field))

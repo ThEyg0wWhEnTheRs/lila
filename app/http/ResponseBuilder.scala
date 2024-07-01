@@ -9,6 +9,7 @@ import play.api.mvc.*
 
 import lila.common.HTTPRequest
 import lila.core.net.ApiVersion
+import lila.ui.{ Page, Snippet }
 
 trait ResponseBuilder(using Executor)
     extends lila.web.ResponseBuilder
@@ -31,9 +32,13 @@ trait ResponseBuilder(using Executor)
     Found(fua): a =>
       op(a).dmap(Ok(_))
 
-  def FoundPage[A](fua: Fu[Option[A]])(op: A => PageContext ?=> Fu[Frag])(using Context): Fu[Result] =
+  def FoundPage[A](fua: Fu[Option[A]])(op: A => Fu[Page])(using Context): Fu[Result] =
     Found(fua): a =>
-      Ok.pageAsync(op(a))
+      Ok.async(op(a))
+
+  def FoundSnip[A](fua: Fu[Option[A]])(op: A => Fu[Snippet])(using Context): Fu[Result] =
+    Found(fua): a =>
+      Ok.snipAsync(op(a).map(_.frag))
 
   extension [A](fua: Fu[Option[A]])
     def orNotFound(f: A => Fu[Result])(using Context): Fu[Result] =
@@ -46,7 +51,7 @@ trait ResponseBuilder(using Executor)
   def rateLimited(msg: String = rateLimitedMsg)(using ctx: Context): Fu[Result] = negotiate(
     html =
       if HTTPRequest.isSynchronousHttp(ctx.req)
-      then TooManyRequests.page(views.html.site.message.rateLimited(msg))
+      then TooManyRequests.page(views.site.message.rateLimited(msg))
       else TooManyRequests(msg).toFuccess,
     json = TooManyRequests(jsonError(msg))
   )
@@ -63,23 +68,31 @@ trait ResponseBuilder(using Executor)
     then json.dmap(_.withHeaders(VARY -> "Accept").as(JSON))
     else html.dmap(_.withHeaders(VARY -> "Accept"))
 
-  def negotiateJson(result: => Fu[Result])(using Context) = negotiate(notFound, result)
+  def negotiateJson(result: => Fu[Result])(using Context) =
+    negotiate(
+      notFound("This endpoint only returns JSON, add the header `Accept: application/json`".some),
+      result
+    )
 
-  def notFound(using ctx: Context): Fu[Result] =
+  def notFound(using ctx: Context): Fu[Result] = notFound(none)
+  def notFound(msg: Option[String])(using ctx: Context): Fu[Result] =
     negotiate(
       html =
         if HTTPRequest.isSynchronousHttp(ctx.req)
-        then keyPages.notFound
-        else notFoundText(),
-      json = notFoundJson()
+        then keyPages.notFound(msg)
+        else msg.fold(notFoundText())(notFoundText),
+      json = msg.fold(notFoundJson())(notFoundJson)
     )
 
   def authenticationFailed(using ctx: Context): Fu[Result] =
     negotiate(
       html = Redirect(
         if HTTPRequest.isClosedLoginPath(ctx.req)
-        then routes.Auth.login
-        else routes.Auth.signup
+        then routes.Auth.login.url
+        else
+          HTTPRequest.queryStringGet(ctx.req, "login") match
+            case Some(login) => s"${routes.Auth.login.url}?as=$login"
+            case _           => routes.Auth.signup.url
       ).withCookies(env.security.lilaCookie.session(env.security.api.AccessUri, ctx.req.uri)),
       json = env.security.lilaCookie.ensure(ctx.req):
         Unauthorized(jsonError("Login required"))
@@ -87,7 +100,7 @@ trait ResponseBuilder(using Executor)
 
   def authorizationFailed(using ctx: Context): Fu[Result] =
     if HTTPRequest.isSynchronousHttp(ctx.req)
-    then Forbidden.page(views.html.site.message.authFailed)
+    then Forbidden.page(views.site.message.authFailed)
     else
       fuccess:
         render:
@@ -96,17 +109,17 @@ trait ResponseBuilder(using Executor)
 
   def serverError(msg: String)(using ctx: Context): Fu[Result] =
     negotiate(
-      InternalServerError.page(views.html.site.message.serverError(msg)),
+      InternalServerError.page(views.site.message.serverError(msg)),
       InternalServerError(jsonError(msg))
     )
 
   def notForBotAccounts(using Context) = negotiate(
-    Forbidden.page(views.html.site.message.noBot),
+    Forbidden.page(views.site.message.noBot),
     forbiddenJson("This API endpoint is not for Bot accounts.")
   )
 
   def notForLameAccounts(using Context, Me) = negotiate(
-    Forbidden.page(views.html.site.message.noLame),
+    Forbidden.page(views.site.message.noLame),
     forbiddenJson("The access to this resource is restricted.")
   )
 
