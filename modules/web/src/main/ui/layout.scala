@@ -45,13 +45,13 @@ final class layout(helpers: Helpers, assetHelper: lila.web.ui.AssetFullHelper)(
   def fontPreload(using ctx: Context) = frag(
     preload(assetUrl("font/lichess.woff2"), "font", crossorigin = true, "font/woff2".some),
     preload(
-      staticAssetUrl("font/noto-sans-v14-latin-regular.woff2"),
+      assetUrl("font/noto-sans-v14-latin-regular.woff2"),
       "font",
       crossorigin = true,
       "font/woff2".some
     ),
     (!ctx.pref.pieceNotationIsLetter).option(
-      preload(staticAssetUrl("font/lichess.chess.woff2"), "font", crossorigin = true, "font/woff2".some)
+      preload(assetUrl("font/lichess.chess.woff2"), "font", crossorigin = true, "font/woff2".some)
     )
   )
 
@@ -163,7 +163,7 @@ final class layout(helpers: Helpers, assetHelper: lila.web.ui.AssetFullHelper)(
   def inlineJs(nonce: Nonce, modules: EsmList = Nil): Frag =
     val code =
       (Esm("site").some :: modules)
-        .flatMap(_.flatMap(m => assetHelper.manifest.inlineJs(m.key).map(js => s"(()=>{${js}})()")))
+        .flatMap(_.flatMap(m => assetHelper.manifest.inlineJs(m.key).map(js => s"(function(){${js}})()")))
         .mkString(";")
     embedJsUnsafe(code)(nonce.some)
 
