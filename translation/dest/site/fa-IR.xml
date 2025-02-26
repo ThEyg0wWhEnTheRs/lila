@@ -132,7 +132,7 @@
     <item quantity="one">%s اشتباه بزرگ</item>
     <item quantity="other">%s اشتباه بزرگ</item>
   </plurals>
-  <plurals name="numberBlunders" comment="Appears on computer analysis results.&#10;&#10;Please note this string was updated to start with a capital letter. It previously had &quot;blunder&quot; in lowercase. It was pre-translated, but the translation memory may have chosen &quot;Blunder&quot; from another string, so please update as required.">
+  <plurals name="numberBlunders">
     <item quantity="one">%s اشتباه بزرگ</item>
     <item quantity="other">%s اشتباه بزرگ</item>
   </plurals>
@@ -140,7 +140,7 @@
     <item quantity="one">%s اشتباه</item>
     <item quantity="other">%s اشتباه</item>
   </plurals>
-  <plurals name="numberMistakes" comment="Appears on computer analysis results.&#10;&#10;Please note this string was updated to start with a capital letter. It previously had &quot;mistake&quot; in lowercase. It was pre-translated, but the translation memory may have chosen &quot;mistake&quot; from another string, so please update as required.">
+  <plurals name="numberMistakes">
     <item quantity="one">%s اشتباه</item>
     <item quantity="other">%s اشتباه</item>
   </plurals>
@@ -148,7 +148,7 @@
     <item quantity="one">%s نادقیق</item>
     <item quantity="other">%s نادقیق</item>
   </plurals>
-  <plurals name="numberInaccuracies" comment="Appears on computer analysis results.&#10;&#10;Please note this string was updated to start with a capital letter. It previously had &quot;inaccuracy&quot; in lowercase. It was pre-translated, but the translation memory may have chosen &quot;Inaccuracy&quot; from another string, so please update as required.">
+  <plurals name="numberInaccuracies">
     <item quantity="one">%s نادقیق</item>
     <item quantity="other">%s نادقیق</item>
   </plurals>
@@ -365,8 +365,8 @@
     <item quantity="other">%s مطالعه</item>
   </plurals>
   <plurals name="nbSimuls">
-    <item quantity="one">%s سیمولتانه</item>
-    <item quantity="other">%s سیمولتانه</item>
+    <item quantity="one">%s همزمان</item>
+    <item quantity="other">%s همزمان</item>
   </plurals>
   <string name="viewTournament">دیدن مسابقات</string>
   <string name="backToTournament">بازگشت به مسابقات</string>
@@ -784,6 +784,7 @@
   <string name="onlineAndOfflinePlay">بازی بَرخط و بُرون‌خط</string>
   <string name="viewTheSolution">دیدن راه‌حل</string>
   <string name="followAndChallengeFriends">دنبالیدن و پیشنهاد بازی دادن به دوستان</string>
+  <string name="noChallenges">هیچ چالشی موجود نیست.</string>
   <plurals name="availableInNbLanguages">
     <item quantity="one">در %s زبان موجود است!</item>
     <item quantity="other">در %s زبان موجود است!</item>
@@ -983,10 +984,8 @@
   <string name="analysisOptions">امکاناتِ تحلیل</string>
   <string name="focusChat">به گپ برو</string>
   <string name="showHelpDialog">نمایش این پنجره راهنما</string>
-  <string name="reopenYourAccount">باز کردن مجدد حساب کاربری</string>
-  <string name="closedAccountChangedMind">اگر حساب کاربری خود را مسدود کردید، اما بعد از آن نظرتان عوض شد، شما یک فرصت برای بازگرداندنِ حساب کاربری خود خواهید داشت.</string>
-  <string name="onlyWorksOnce">تنها یک‌بار کار خواهد کرد.</string>
-  <string name="cantDoThisTwice">اگر برای بار دوم حساب کاربری خود را مسدود سازید، هیچ راهی برای بازیابی آن وجود نخواهد داشت.</string>
+  <string name="reopenYourAccount" comment="Appears on the page where players can reopen their closed account - https://lichess.org/account/reopen (you can only see this when you logged out).">باز کردن مجدد حساب کاربری</string>
+  <string name="reopenYourAccountDescription" comment="Appears on the page where players can reopen their closed account - https://lichess.org/account/reopen (you can only see this when you logged out).">اگر حسابتان را بسته اید ولی نظرتان عوض شده، فرصت بازپس‌گیری آن را دارید.</string>
   <string name="emailAssociatedToaccount">آدرس ایمیلی که به حساب کاربری مربوط شده است</string>
   <string name="sentEmailWithLink">ما رایانامه‌ای شامل یک پیوند را به شما فرستاده‌ایم.</string>
   <string name="tournamentEntryCode">کد ورودی مسابقه</string>

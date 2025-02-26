@@ -8,10 +8,9 @@ object Links:
     text.linesIterator.toList
       .map(_.trim)
       .filter(_.nonEmpty)
-      .flatMap {
+      .flatMap:
         case Site.mastodonRegex(user, server) => Link(Site.Mastodon, s"https://$server/@$user").some
         case line => toLink(if line.contains("://") then line else s"https://$line")
-      }
 
   private def toLink(line: String): Option[Link] =
     for
@@ -41,7 +40,7 @@ object Link:
             .toList
         )
     case Bluesky               extends Site("Bluesky", List("bsky.app"))
-    case Twitter               extends Site("X", List("twitter.com", "x.com"))
+    case Twitter               extends Site("x", List("twitter.com", "x.com"))
     case Facebook              extends Site("Facebook", List("facebook.com"))
     case Instagram             extends Site("Instagram", List("instagram.com"))
     case YouTube               extends Site("YouTube", List("youtube.com"))

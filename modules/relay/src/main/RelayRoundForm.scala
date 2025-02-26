@@ -6,17 +6,23 @@ import play.api.data.*
 import play.api.data.Forms.*
 import play.api.data.format.Formatter
 import scalalib.model.Seconds
-import lila.common.Form.{ cleanText, formatter, into, stringIn, LocalDateTimeOrTimestamp }
+import lila.common.Form.{
+  cleanText,
+  cleanNonEmptyText,
+  formatter,
+  into,
+  stringIn,
+  LocalDateTimeOrTimestamp,
+  partial
+}
 import lila.core.perm.Granter
 import lila.relay.RelayRound.Sync
 import lila.relay.RelayRound.Sync.Upstream
 import lila.relay.RelayRound.Sync.url.*
-import lila.common.Form.PrettyDateTime
 
 final class RelayRoundForm(using mode: Mode):
 
   import RelayRoundForm.*
-  import lila.common.Form.ISOInstantOrTimestamp
 
   private given (using Me): Formatter[Upstream.Url] =
     formatter.stringTryFormatter(str => validateUpstreamUrl(str).map(Upstream.Url.apply), _.url.toString)
@@ -30,18 +36,27 @@ final class RelayRoundForm(using mode: Mode):
       .map(Upstream.Urls.apply),
     _.urls.mkString("\n")
   )
-  private given Formatter[Upstream.Ids] = formatter.stringTryFormatter(
-    _.split(' ').toList
+
+  private def toIdList[Id](s: String, max: Max, f: String => Option[Id]): Either[String, List[Id]] =
+    s.replace(",", " ")
+      .split(' ')
+      .toList
       .map(_.trim)
-      .traverse: i =>
-        GameId.from(i.trim).toRight(s"Invalid game ID: $i")
-      .filterOrElse(
-        _.sizeIs <= RelayFetch.maxChaptersToShow.value,
-        s"Max games: ${RelayFetch.maxChaptersToShow}"
-      )
-      .map(_.distinct)
-      .map(Upstream.Ids.apply),
+      .filter(_.nonEmpty)
+      .distinct
+      .traverse(i => f(i).toRight(s"Invalid: $i"))
+      .filterOrElse(_.sizeIs <= max.value, s"Max: $max")
+
+  private given Formatter[Upstream.Ids] = formatter.stringTryFormatter(
+    s => toIdList(s, RelayFetch.maxChaptersToShow, GameId.from).map(Upstream.Ids.apply),
     _.ids.mkString(" ")
+  )
+  private given Formatter[Upstream.Users] = formatter.stringTryFormatter(
+    s =>
+      toIdList(s, Max(100), UserStr.read)
+        .filterOrElse(_.sizeIs >= 2, s"Min users: 2")
+        .map(Upstream.Users.apply),
+    _.users.mkString(" ")
   )
 
   def roundMapping(tour: RelayTour)(using Me): Mapping[Data] =
@@ -52,12 +67,15 @@ final class RelayRoundForm(using mode: Mode):
       "syncUrl"             -> optional(of[Upstream.Url]),
       "syncUrls"            -> optional(of[Upstream.Urls]),
       "syncIds"             -> optional(of[Upstream.Ids]),
+      "syncUsers"           -> optional(of[Upstream.Users]),
       "startsAt"            -> optional(LocalDateTimeOrTimestamp(tour.info.timeZoneOrDefault).mapping),
       "startsAfterPrevious" -> optional(boolean),
-      "finished"            -> optional(boolean),
-      "period"              -> optional(number(min = 2, max = 60).into[Seconds]),
-      "delay"               -> optional(number(min = 0, max = RelayDelay.maxSeconds.value).into[Seconds]),
-      "onlyRound"           -> optional(number(min = 1, max = 999)),
+      "status" -> optional:
+        text.partial[Data.Status](_.toString):
+          case ok: Data.Status => ok,
+      "period"    -> optional(number(min = 2, max = 60).into[Seconds]),
+      "delay"     -> optional(number(min = 0, max = RelayDelay.maxSeconds.value).into[Seconds]),
+      "onlyRound" -> optional(cleanNonEmptyText(maxLength = 50)),
       "slices" -> optional:
         nonEmptyText.transform[List[RelayGame.Slice]](RelayGame.Slices.parse, RelayGame.Slices.show)
     )(Data.apply)(unapply)
@@ -81,10 +99,11 @@ final class RelayRoundForm(using mode: Mode):
 object RelayRoundForm:
 
   val sourceTypes = List(
-    "push" -> "Broadcaster App",
-    "url"  -> "Single PGN URL",
-    "urls" -> "Combine several PGN URLs",
-    "ids"  -> "Lichess game IDs"
+    "push"  -> "Broadcaster App",
+    "url"   -> "Single PGN URL",
+    "urls"  -> "Combine several PGN URLs",
+    "ids"   -> "Lichess game IDs",
+    "users" -> "Lichess usernames"
   )
 
   private val roundNumberRegex = """([^\d]*)(\d{1,2})([^\d]*)""".r
@@ -131,20 +150,21 @@ object RelayRoundForm:
       startsAfterPrevious = prev.exists(_.startsAfterPrevious).option(true),
       period = prev.flatMap(_.sync.period),
       delay = prev.flatMap(_.sync.delay),
-      onlyRound = prev.flatMap(_.sync.onlyRound).map(_ + 1),
+      onlyRound = prev.flatMap(_.sync.onlyRound).map(_.map(_ + 1)).map(Sync.OnlyRound.toString),
       slices = prev.flatMap(_.sync.slices)
     )
 
   case class GameIds(ids: List[GameId])
 
-  private def cleanUrl(source: String)(using mode: Mode): Option[URL] =
+  private[relay] def cleanUrl(source: String)(using mode: Mode): Option[URL] =
     for
       url <- lila.common.url.parse(source).toOption
       if url.scheme == "http" || url.scheme == "https"
       host <- Option(url.host).map(_.toHostString)
       // prevent common mistakes (not for security)
       if mode.notProd || !blocklist.exists(subdomain(host, _))
-      if !subdomain(host, "chess.com") || url.toString.startsWith("https://api.chess.com/pub")
+      if !subdomain(host, "chess.com") || url.toString.startsWith("https://api.chess.com/pub") || url.toString
+        .startsWith("https://www.chess.com/events/v1/api")
     yield url
 
   private def validateUpstreamUrl(s: String)(using Me, Mode): Either[String, URL] = for
@@ -191,20 +211,22 @@ object RelayRoundForm:
       syncUrl: Option[Upstream.Url] = None,
       syncUrls: Option[Upstream.Urls] = None,
       syncIds: Option[Upstream.Ids] = None,
+      syncUsers: Option[Upstream.Users] = None,
       startsAt: Option[Instant] = None,
       startsAfterPrevious: Option[Boolean] = None,
-      finished: Option[Boolean] = None,
+      status: Option[Data.Status] = None,
       period: Option[Seconds] = None,
       delay: Option[Seconds] = None,
-      onlyRound: Option[Int] = None,
+      onlyRound: Option[String] = None,
       slices: Option[List[RelayGame.Slice]] = None
   ):
     def upstream: Option[Upstream] = syncSource.match
-      case None         => syncUrl.orElse(syncUrls).orElse(syncIds)
-      case Some("url")  => syncUrl
-      case Some("urls") => syncUrls
-      case Some("ids")  => syncIds
-      case _            => None
+      case None          => syncUrl.orElse(syncUrls).orElse(syncIds).orElse(syncUsers)
+      case Some("url")   => syncUrl
+      case Some("urls")  => syncUrls
+      case Some("ids")   => syncIds
+      case Some("users") => syncUsers
+      case _             => None
 
     private def relayStartsAt: Option[RelayRound.Starts] = startsAt
       .map(RelayRound.Starts.At(_))
@@ -217,7 +239,10 @@ object RelayRoundForm:
         caption = if Granter(_.StudyAdmin) then caption else relay.caption,
         sync = if relay.sync.playing then sync.play(official) else sync,
         startsAt = relayStartsAt,
-        finishedAt = finished.orZero.option(relay.finishedAt.|(nowInstant))
+        startedAt = status.fold(relay.startedAt):
+          case "new" => none
+          case _     => relay.startedAt.orElse(nowInstant.some),
+        finishedAt = status.has("finished").option(relay.finishedAt.|(nowInstant))
       )
 
     private def makeSync(prev: Option[RelayRound.Sync])(using Me): Sync =
@@ -227,7 +252,7 @@ object RelayRoundForm:
         nextAt = none,
         period = if Granter(_.StudyAdmin) then period else prev.flatMap(_.period),
         delay = delay,
-        onlyRound = onlyRound,
+        onlyRound = onlyRound.ifFalse(upstream.exists(_.isInternal)).map(Sync.OnlyRound.parse),
         slices = slices,
         log = SyncLog.empty
       )
@@ -241,12 +266,14 @@ object RelayRoundForm:
         sync = makeSync(none),
         createdAt = nowInstant,
         crowd = none,
-        finishedAt = (~finished).option(nowInstant),
         startsAt = relayStartsAt,
-        startedAt = none
+        startedAt = if status.has("new") then none else nowInstant.some,
+        finishedAt = status.has("finished").option(nowInstant)
       )
 
   object Data:
+
+    type Status = "new" | "started" | "finished"
 
     def make(relay: RelayRound) =
       Data(
@@ -254,9 +281,10 @@ object RelayRoundForm:
         caption = relay.caption,
         syncSource = relay.sync.upstream
           .fold("push"):
-            case _: Upstream.Url  => "url"
-            case _: Upstream.Urls => "urls"
-            case _: Upstream.Ids  => "ids"
+            case _: Upstream.Url   => "url"
+            case _: Upstream.Urls  => "urls"
+            case _: Upstream.Ids   => "ids"
+            case _: Upstream.Users => "users"
           .some,
         syncUrl = relay.sync.upstream.collect:
           case url: Upstream.Url => url,
@@ -265,11 +293,17 @@ object RelayRoundForm:
           case urls: Upstream.Urls => urls,
         syncIds = relay.sync.upstream.collect:
           case ids: Upstream.Ids => ids,
+        syncUsers = relay.sync.upstream.collect:
+          case users: Upstream.Users => users,
         startsAt = relay.startsAtTime,
         startsAfterPrevious = relay.startsAfterPrevious.option(true),
-        finished = relay.isFinished.option(true),
+        status = some:
+          if relay.isFinished then "finished"
+          else if relay.hasStarted then "started"
+          else "new"
+        ,
         period = relay.sync.period,
-        onlyRound = relay.sync.onlyRound,
+        onlyRound = relay.sync.onlyRound.map(Sync.OnlyRound.toString),
         slices = relay.sync.slices,
         delay = relay.sync.delay
       )

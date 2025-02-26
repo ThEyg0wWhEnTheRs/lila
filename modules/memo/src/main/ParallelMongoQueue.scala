@@ -1,9 +1,6 @@
 package lila.memo
 
-import com.softwaremill.tagging.*
-import lila.memo.SettingStore
 import lila.db.dsl.*
-import akka.stream.scaladsl.*
 import reactivemongo.api.bson.*
 import reactivemongo.api.bson.Macros.Annotations.Key
 import lila.common.Uptime

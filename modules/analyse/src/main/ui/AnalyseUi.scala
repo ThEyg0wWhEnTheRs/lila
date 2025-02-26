@@ -24,12 +24,13 @@ final class AnalyseUi(helpers: Helpers)(externalEngineEndpoint: String):
       .css(ctx.pref.hasKeyboardMove.option("keyboardMove"))
       .csp(csp.compose(_.withExternalAnalysisApis))
       .i18n(_.puzzle, _.study)
+      .i18nOpt(ctx.blind, _.keyboardMove)
       .graph(
         title = "Chess analysis board",
         url = s"$netBaseUrl${routes.UserAnalysis.index.url}",
         description = "Analyse chess positions and variations on an interactive chess board"
       )
-      .zoom:
+      .flag(_.zoom):
         main(
           cls := List(
             "analyse"       -> true,

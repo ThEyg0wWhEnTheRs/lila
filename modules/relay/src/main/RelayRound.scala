@@ -57,6 +57,9 @@ case class RelayRound(
 
   def shouldHaveStarted1Hour = !hasStarted && startsAtTime.exists(_.isBefore(nowInstant.minusHours(1)))
 
+  def looksStalled =
+    hasStarted && !isFinished && sync.log.updatedAt.forall(_.isBefore(nowInstant.minusHours(1)))
+
   def shouldGiveUp =
     !hasStarted && startsAtTime.match
       case Some(at) => at.isBefore(nowInstant.minusHours(3))
@@ -86,12 +89,12 @@ object RelayRound:
     case AfterPrevious
 
   case class Sync(
-      upstream: Option[Sync.Upstream], // if empty, needs a client to push PGN
-      until: Option[Instant],          // sync until then; resets on move
-      nextAt: Option[Instant],         // when to run next sync
-      period: Option[Seconds],         // override time between two sync (rare)
-      delay: Option[Seconds],          // add delay between the source and the study
-      onlyRound: Option[Int],          // only keep games with [Round "x"]
+      upstream: Option[Sync.Upstream],   // if empty, needs a client to push PGN
+      until: Option[Instant],            // sync until then; resets on move
+      nextAt: Option[Instant],           // when to run next sync
+      period: Option[Seconds],           // override time between two sync (rare)
+      delay: Option[Seconds],            // add delay between the source and the study
+      onlyRound: Option[Sync.OnlyRound], // only keep games with [Round "x"]
       slices: Option[List[RelayGame.Slice]] = none,
       log: SyncLog
   ):
@@ -134,6 +137,13 @@ object RelayRound:
 
   object Sync:
 
+    // either an Int round number,
+    // or a string that matches exactly the Round tag
+    type OnlyRound = Either[String, Int]
+    object OnlyRound:
+      def toString(r: OnlyRound) = r.fold(identity, _.toString)
+      def parse(s: String)       = s.toIntOption.fold(Left(s))(Right(_))
+
     object url:
       private val lccRegex = """view\.livechesscloud\.com/?#?([0-9a-f\-]+)/(\d+)""".r.unanchored
       extension (url: URL)
@@ -144,9 +154,10 @@ object RelayRound:
     import url.*
 
     enum Upstream:
-      case Url(url: URL)          extends Upstream
-      case Urls(urls: List[URL])  extends Upstream
-      case Ids(ids: List[GameId]) extends Upstream
+      case Url(url: URL)               extends Upstream
+      case Urls(urls: List[URL])       extends Upstream
+      case Ids(ids: List[GameId])      extends Upstream
+      case Users(users: List[UserStr]) extends Upstream
       def asUrl: Option[URL] = this match
         case Url(url) => url.some
         case _        => none
@@ -173,9 +184,10 @@ object RelayRound:
         case url: Url   => url.roundId.toList
         case Urls(urls) => urls.map(Url.apply).flatMap(_.roundId)
         case _          => Nil
-      def isGameIds = this match
-        case Ids(_) => true
-        case _      => false
+      def isInternal = this match
+        case Ids(_)   => true
+        case Users(_) => true
+        case _        => false
 
     case class Lcc(id: String, round: Int):
       def pageUrl         = URL.parse(s"https://view.livechesscloud.com/#$id/$round")

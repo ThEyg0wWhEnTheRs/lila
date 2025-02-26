@@ -18,6 +18,9 @@ final class HistoryApi(
 
   import History.{ given, * }
 
+  lila.common.Bus.sub[lila.core.user.UserDelete]: del =>
+    withColl(_.delete.one($id(del.id)).void)
+
   def addPuzzle(user: User, completedAt: Instant, perf: lila.core.perf.Perf): Funit =
     withColl: coll =>
       val days = daysBetween(user.createdAt, completedAt)
@@ -107,8 +110,10 @@ final class HistoryApi(
 
   private val lastWeekTopRatingCache = cacheApi[(UserId, PerfKey), IntRating](1024, "lastWeekTopRating"):
     _.expireAfterAccess(20.minutes).buildAsyncFuture: (userId, perf) =>
-      userApi.withIntRatingIn(userId, perf).orFail(s"No such user: $userId").flatMap {
-        (user, currentRating) =>
+      userApi
+        .withIntRatingIn(userId, perf)
+        .orFail(s"No such user: $userId")
+        .flatMap: (user, currentRating) =>
           val firstDay = daysBetween(user.createdAt, nowInstant.minusWeeks(1))
           val days     = (firstDay to (firstDay + 6)).toList
           val project = $doc:
@@ -122,4 +127,3 @@ final class HistoryApi(
                   case (max, _)                                                    => max
               }
           }).dmap(_ | currentRating)
-      }

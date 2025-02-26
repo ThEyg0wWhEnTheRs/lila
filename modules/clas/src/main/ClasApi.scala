@@ -24,6 +24,11 @@ final class ClasApi(
 
   import BsonHandlers.given
 
+  lila.common.Bus.sub[lila.core.user.UserDelete]: del =>
+    colls.clas.update.one($doc("created.by" -> del.id), $set("created.by" -> UserId.ghost), multi = true)
+    colls.clas.update.one($doc("teachers" -> del.id), $pull("teachers" -> del.id), multi = true)
+    colls.student.delete.one($doc("userId" -> del.id))
+
   object clas:
 
     val coll = colls.clas
@@ -193,10 +198,12 @@ final class ClasApi(
 
     def findManaged(user: User): Fu[Option[Student.ManagedInfo]] =
       coll.find($doc("userId" -> user.id, "managed" -> true)).one[Student].flatMapz { student =>
-        userRepo.byId(student.created.by).zip(clas.byId(student.clasId)).map {
-          case (Some(teacher), Some(clas)) => Student.ManagedInfo(teacher, clas).some
-          case _                           => none
-        }
+        userRepo
+          .byId(student.created.by)
+          .zip(clas.byId(student.clasId))
+          .map:
+            case (Some(teacher), Some(clas)) => Student.ManagedInfo(teacher, clas).some
+            case _                           => none
       }
 
     def get(clas: Clas, userId: UserId): Fu[Option[Student]] =
@@ -329,7 +336,7 @@ ${clas.desc}""",
       student
         .archive(Student.makeId(user.id, clas.id), v = false)
         .map2[ClasInvite.Feedback](_ => Already)
-        .getOrElse {
+        .getOrElse:
           lila.mon.clas.student.invite(teacher.userId.value).increment()
           val invite = ClasInvite.make(clas, user, realName)
           colls.invite.insert
@@ -339,7 +346,6 @@ ${clas.desc}""",
               sendInviteMessage(teacher, user, clas, invite)
             .recover:
               lila.db.recoverDuplicateKey(_ => Found)
-        }
 
     def get(id: ClasInviteId) = colls.invite.one[ClasInvite]($id(id))
 

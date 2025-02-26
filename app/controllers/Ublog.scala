@@ -4,10 +4,11 @@ import play.api.i18n.Lang
 import play.api.mvc.Result
 
 import lila.app.{ *, given }
-import lila.core.i18n.Language
+import scalalib.model.Language
 import lila.i18n.{ LangList, LangPicker }
 import lila.report.Suspect
 import lila.ublog.{ UblogBlog, UblogPost, UblogRank }
+import lila.core.i18n.toLanguage
 
 final class Ublog(env: Env) extends LilaController(env):
 
@@ -66,22 +67,23 @@ final class Ublog(env: Env) extends LilaController(env):
       import lila.forum.ForumCateg.ublogId
       val topicSlug = s"ublog-${id}"
       val redirect  = Redirect(routes.ForumTopic.show(ublogId, topicSlug))
-      env.forum.topicRepo.existsByTree(ublogId, topicSlug).flatMap {
-        if _ then redirect
-        else
-          env.ublog.api
-            .getPost(id)
-            .flatMapz { post =>
-              env.forum.topicApi.makeUblogDiscuss(
-                slug = topicSlug,
-                name = post.title,
-                url = s"${env.net.baseUrl}${routes.Ublog.post(post.created.by, post.slug, id)}",
-                ublogId = id,
-                authorId = post.created.by
-              )
-            }
-            .inject(redirect)
-      }
+      env.forum.topicRepo
+        .existsByTree(ublogId, topicSlug)
+        .flatMap:
+          if _ then redirect
+          else
+            env.ublog.api
+              .getPost(id)
+              .flatMapz { post =>
+                env.forum.topicApi.makeUblogDiscuss(
+                  slug = topicSlug,
+                  name = post.title,
+                  url = s"${env.net.baseUrl}${routes.Ublog.post(post.created.by, post.slug, id)}",
+                  ublogId = id,
+                  authorId = post.created.by
+                )
+              }
+              .inject(redirect)
   private def WithBlogOf[U: UserIdOf](
       u: U
   )(f: (UserModel, UblogBlog) => Fu[Result])(using Context): Fu[Result] =
@@ -182,7 +184,7 @@ final class Ublog(env: Env) extends LilaController(env):
         tier =>
           for
             user <- env.user.repo.byId(blog.userId).orFail("Missing blog user!").dmap(Suspect.apply)
-            _    <- env.ublog.api.setTier(blog.id, tier)
+            _    <- env.ublog.api.setModTier(blog.id, tier)
             _    <- env.ublog.rank.recomputeRankOfAllPostsOfBlog(blog.id)
             _    <- env.mod.logApi.blogTier(user, UblogRank.Tier.name(tier))
           yield Redirect(urlOfBlog(blog)).flashSuccess
@@ -195,7 +197,7 @@ final class Ublog(env: Env) extends LilaController(env):
         _ => Redirect(urlOfPost(post)).flashFailure,
         (pinned, tier, rankAdjustDays) =>
           for
-            _ <- env.ublog.api.setTier(post.blog, tier)
+            _ <- env.ublog.api.setModTier(post.blog, tier)
             _ <- env.ublog.api.setRankAdjust(post.id, ~rankAdjustDays, pinned)
             _ <- logModAction(
               post,
@@ -251,16 +253,16 @@ final class Ublog(env: Env) extends LilaController(env):
       Reasonable(page, Max(100)):
         pageHit
         Ok.async:
-          val language = l.map(Language.apply)
+          val language = l.map(toLanguage)
           env.ublog.paginator
             .liveByCommunity(language, page)
             .map:
               views.ublog.community(language, _)
 
   def communityAtom(language: Language) = Anon:
-    val found: Option[Lang] = LangList.popularNoRegion.find(l => Language(l) == language)
+    val found: Option[Lang] = LangList.popularNoRegion.find(l => toLanguage(l) == language)
     env.ublog.paginator
-      .liveByCommunity(found.map(Language.apply), page = 1)
+      .liveByCommunity(found.map(toLanguage), page = 1)
       .map: posts =>
         Ok.snip(views.ublog.ui.atom.community(language, posts.currentPageResults)).as(XML)
 

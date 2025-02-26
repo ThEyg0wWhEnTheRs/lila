@@ -131,9 +131,6 @@ trait dsl:
   def $nin[T: BSONWriter](values: T*) = $doc("$nin" -> values)
   def $exists(value: Boolean)         = $doc("$exists" -> value)
 
-  trait CurrentDateValueProducer[T]:
-    def produce: BSONValue
-
   // End of Top Level Field Update Operators
   // **********************************************************************************************//
 
@@ -266,6 +263,12 @@ trait dsl:
       SimpleExpression(field, $doc("$elemMatch" -> $doc(query*)))
 
     def $size(s: Int): SimpleExpression[Bdoc] = SimpleExpression(field, $doc("$size" -> s))
+
+  def dateBetween(field: String, since: Option[Instant], until: Option[Instant]): Bdoc = (since, until) match
+    case (Some(since), None)        => field.$gte(since)
+    case (None, Some(until))        => field.$lt(until)
+    case (Some(since), Some(until)) => field.$gte(since).$lt(until)
+    case _                          => $empty
 
   object $sort:
 
@@ -416,10 +419,11 @@ object dsl extends dsl with Handlers:
           // because of reactivemongo given tuple2Writer
           // so we need to check if the ID writes to an array,
           // then the second value is probably a projection.
-          summon[BSONWriter[I]].writeOpt(id).so {
-            case BSONArray(Seq(id, proj: Bdoc)) => byIdProj[D](id, proj)
-            case id                             => one[D]($id(id))
-        }
+          summon[BSONWriter[I]]
+            .writeOpt(id)
+            .so:
+              case BSONArray(Seq(id, proj: Bdoc)) => byIdProj[D](id, proj)
+              case id                             => one[D]($id(id))
 
     def byIdProj[D](using BSONDocumentReader[D]): [I] => (I, Bdoc) => BSONWriter[I] ?=> Fu[Option[D]] =
       [I] => (id: I, projection: Bdoc) => one[D]($id(id), projection)
@@ -595,8 +599,8 @@ object dsl extends dsl with Handlers:
           allowDiskUse = allowDiskUse,
           readPreference = readPref
         ): agg =>
-          val nonEmpty = f(agg)
-          nonEmpty._1 +: nonEmpty._2
+          val (head, tail) = f(agg)
+          head :: tail
         .collect[List](maxDocs = maxDocs)
 
     def aggregateOne(

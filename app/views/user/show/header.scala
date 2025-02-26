@@ -12,7 +12,14 @@ object header:
   private val dataToints = attr("data-toints")
   private val dataTab    = attr("data-tab")
 
+  private def possibleSeoBot(u: User) =
+    !u.isVerified && !u.hasTitle && u.count.game < 5 && (
+      u.profile.exists(_.links.isDefined) ||
+        u.profile.flatMap(_.nonEmptyBio).exists(_.contains("https://"))
+    )
+
   def apply(u: User, info: UserInfo, angle: UserInfo.Angle, social: UserInfo.Social)(using ctx: Context) =
+    val showLinks = !possibleSeoBot(u) || isGranted(_.Shadowban)
     frag(
       div(cls := "box__top user-show__header")(
         if u.isPatron then
@@ -33,7 +40,7 @@ object header:
             a(
               href := routes.Plan.index(),
               cls  := "trophy award patron icon3d",
-              ariaTitle(s"Patron since ${showDate(u.plan.sinceDate)}")
+              ariaTitle(trans.patron.patronSince.txt(showDate(u.plan.sinceDate)))
             )(patronIconChar)
           )
         ),
@@ -82,7 +89,7 @@ object header:
               cls  := "nm-item",
               href := routes.Ublog.index(u.username)
             )(
-              splitNumber(s"${info.ublog.so(_.nbPosts)} blog posts")
+              splitNumber(trans.ublog.blogPosts.pluralSame(info.ublog.so(_.nbPosts)))
             )
           ),
           (ctx.isAuth && ctx.isnt(u))
@@ -174,24 +181,20 @@ object header:
             else (ctx.is(u) && u.count.game < 10).option(ui.newPlayer(u)),
             div(cls := "profile-side")(
               div(cls := "user-infos")(
-                ctx
-                  .isnt(u)
-                  .option(
-                    frag(
-                      u.lame.option(
-                        div(cls := "warning tos_warning")(
-                          span(dataIcon := Icon.CautionCircle, cls := "is4"),
-                          trans.site.thisAccountViolatedTos()
-                        )
-                      )
-                    )
-                  ),
+                (u.lame && ctx.isnt(u)).option:
+                  div(cls := "warning tos_warning")(
+                    span(dataIcon := Icon.CautionCircle, cls := "is4"),
+                    trans.site.thisAccountViolatedTos()
+                  )
+                ,
                 (ctx.kid.no && !hideTroll && !u.kid).option(
                   frag(
                     profile.nonEmptyRealName.map: name =>
                       strong(cls := "name")(name),
-                    profile.nonEmptyBio.map: bio =>
-                      p(cls := "bio")(richText(bio, nl2br = true))
+                    showLinks
+                      .so(profile.nonEmptyBio)
+                      .map: bio =>
+                        p(cls := "bio")(richText(bio, nl2br = true))
                   )
                 ),
                 div(cls := "stats")(
@@ -228,9 +231,15 @@ object header:
                     ),
                   (!hideTroll && !u.kid).option(
                     div(cls := "social_links col2")(
-                      profile.actualLinks.nonEmpty.option(strong(trans.site.socialMediaLinks())),
-                      profile.actualLinks.map: link =>
-                        a(href := link.url, targetBlank, noFollow, relMe)(link.site.name)
+                      showLinks
+                        .option(profile.actualLinks)
+                        .filter(_.nonEmpty)
+                        .map: links =>
+                          frag(
+                            strong(trans.site.socialMediaLinks()),
+                            links.map: link =>
+                              a(href := link.url, targetBlank, noFollow, relMe)(link.site.name)
+                          )
                     )
                   ),
                   (ctx.is(u) || !u.kid).option(

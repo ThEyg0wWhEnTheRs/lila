@@ -1,10 +1,12 @@
 package controllers
 
 import play.api.mvc.*
+import play.api.libs.json.*
 
 import lila.app.{ *, given }
 import lila.common.HTTPRequest
 import lila.notify.NotificationPref
+import lila.common.Json.given
 
 final class Pref(env: Env) extends LilaController(env):
 
@@ -14,7 +16,6 @@ final class Pref(env: Env) extends LilaController(env):
   def apiGet = Scoped(_.Preference.Read, _.Web.Mobile) { _ ?=> me ?=>
     env.pref.api.get(me).map { prefs =>
       JsonOk:
-        import play.api.libs.json.*
         Json
           .obj("prefs" -> lila.pref.JsonView.write(prefs, lichobileCompat = false))
           .add("language" -> me.lang)
@@ -34,9 +35,10 @@ final class Pref(env: Env) extends LilaController(env):
           lila.pref.PrefCateg(categSlug) match
             case None if categSlug == "notification" =>
               Ok.async:
-                env.notifyM.api.prefs.form(me).map {
-                  views.account.pref.notification(_)
-                }
+                env.notifyM.api.prefs
+                  .form(me)
+                  .map:
+                    views.account.pref.notification(_)
             case None        => notFound
             case Some(categ) => Ok.page(views.account.pref(me, forms.prefOf(ctx.pref), categ))
         }
@@ -68,9 +70,10 @@ final class Pref(env: Env) extends LilaController(env):
     if name == "zoom"
     then Ok.withCookies(env.security.lilaCookie.cookie("zoom", (getInt("v") | 85).toString))
     else if name == "agreement" then
-      ctx.me.so(api.agree(_)).inject {
-        if HTTPRequest.isXhr(ctx.req) then NoContent else Redirect(routes.Lobby.home)
-      }
+      ctx.me
+        .so(api.agree(_))
+        .inject:
+          if HTTPRequest.isXhr(ctx.req) then NoContent else Redirect(routes.Lobby.home)
     else
       lila.pref.PrefSingleChange.changes
         .get(name)

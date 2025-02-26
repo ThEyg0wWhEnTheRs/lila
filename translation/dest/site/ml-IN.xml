@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
   <string name="playWithAFriend">സുഹൃത്തിനോടൊപ്പം കളിക്കുക</string>
-  <string name="playWithTheMachine">കമ്പ്യൂട്ടറിനെതിരെ മത്സരിക്കുക</string>
+  <string name="playWithTheMachine">ഗണനികയിനെതിരെ മത്സരിക്കുക</string>
   <string name="toInviteSomeoneToPlayGiveThisUrl">മറ്റാരുടെയെങ്കിലും കൂടെ മത്സരിക്കുവാനായി ഈ ലിങ്ക് നല്കുക</string>
   <string name="gameOver">കളി അവസാനിച്ചിരിക്കുന്നു</string>
   <string name="waitingForOpponent">എതിരാളിക്കായി കാത്തിരിക്കുന്നു</string>
@@ -53,7 +53,7 @@
   <string name="whiteDidntMove">വൈറ്റ് നീക്കം നടത്തിയില്ല</string>
   <string name="blackDidntMove">ബ്ലാക്ക് നീക്കം നടത്തിയില്ല</string>
   <string name="requestAComputerAnalysis">ഗണനിക പരിശോധനക്ക് അപേക്ഷിക്കുക</string>
-  <string name="computerAnalysis">കമ്പ്യൂട്ടർ പരിശോധന</string>
+  <string name="computerAnalysis">ഗണനിക പരിശോധന</string>
   <string name="computerAnalysisAvailable">നിങ്ങൾക്ക് ഗണനിക വിശകലനം ലഭ്യമാണ്</string>
   <string name="computerAnalysisDisabled">ഗണനിക വിശകലനം പ്രവർത്തനരഹിതമാക്കിയിരിക്കുന്നു</string>
   <string name="analysis">പരിശോധനാ കളം</string>
@@ -89,7 +89,7 @@
   <string name="whiteDrawBlack">വെള്ള / സമനില / കറുപ്പ്</string>
   <string name="averageRatingX">ശരാശരി റേറ്റിങ് %s</string>
   <string name="recentGames">സമീപകാല ഗെയിമുകൾ</string>
-  <string name="topGames">മികച്ച ഗെയിമുകൾ</string>
+  <string name="topGames">മികച്ച കളികൾ</string>
   <string name="masterDbExplanation">%2$s മുതൽ %3$s വരെയുള്ള %1$s+ ഫിഡെ റേറ്റിംഗുള്ള കളിക്കാരുടെ 2 മില്യൺ OTB ഗെയിമുകൾ</string>
   <plurals name="mateInXHalfMoves">
     <item quantity="one">%s പകുതി-നീക്കത്തിനുള്ളിൽ ചെക്ക്മേറ്റ്</item>
@@ -121,7 +121,7 @@
   <string name="evaluationGauge">മൂല്യനിർണയ സംവിധാനം</string>
   <string name="multipleLines">ഒന്നിലധികം വരികൾ</string>
   <string name="cpus">CPUs</string>
-  <string name="memory">സ്മൃതി</string>
+  <string name="memory">ഓൎമ്മ</string>
   <string name="infiniteAnalysis">അനന്തമായ വിശകലനം</string>
   <string name="removesTheDepthLimit">ആഴം കുറിച്ച് കംപ്യൂട്ടറിനെ ചൂടാക്കി വെയ്ക്കുന്നു</string>
   <string name="blunder">മണ്ടത്തരം</string>
@@ -131,7 +131,7 @@
     <item quantity="one">%s തെറ്റ്</item>
     <item quantity="other">%s തെറ്റുകള്‍</item>
   </plurals>
-  <plurals name="numberBlunders" comment="Appears on computer analysis results.&#10;&#10;Please note this string was updated to start with a capital letter. It previously had &quot;blunder&quot; in lowercase. It was pre-translated, but the translation memory may have chosen &quot;Blunder&quot; from another string, so please update as required.">
+  <plurals name="numberBlunders">
     <item quantity="one">%s തെറ്റ്</item>
     <item quantity="other">%s തെറ്റുകള്‍</item>
   </plurals>
@@ -139,7 +139,7 @@
     <item quantity="one">%s ചെറിയ തെറ്റുകള്‍</item>
     <item quantity="other">%s ചെറിയ തെറ്റുകള്‍</item>
   </plurals>
-  <plurals name="numberMistakes" comment="Appears on computer analysis results.&#10;&#10;Please note this string was updated to start with a capital letter. It previously had &quot;mistake&quot; in lowercase. It was pre-translated, but the translation memory may have chosen &quot;mistake&quot; from another string, so please update as required.">
+  <plurals name="numberMistakes">
     <item quantity="one">%s ചെറിയ തെറ്റുകള്‍</item>
     <item quantity="other">%s ചെറിയ തെറ്റുകള്‍</item>
   </plurals>
@@ -147,7 +147,7 @@
     <item quantity="one">%s കൃത്യത കുറവ്</item>
     <item quantity="other">%s കൃത്യത കുറവുകള്‍</item>
   </plurals>
-  <plurals name="numberInaccuracies" comment="Appears on computer analysis results.&#10;&#10;Please note this string was updated to start with a capital letter. It previously had &quot;inaccuracy&quot; in lowercase. It was pre-translated, but the translation memory may have chosen &quot;Inaccuracy&quot; from another string, so please update as required.">
+  <plurals name="numberInaccuracies">
     <item quantity="one">%s കൃത്യത കുറവ്</item>
     <item quantity="other">%s കൃത്യത കുറവുകള്‍</item>
   </plurals>
@@ -162,11 +162,15 @@
     <item quantity="other">%s കളിക്കാർ</item>
   </plurals>
   <string name="drawByMutualAgreement">പരസ്പര സമ്മതത്തോടുകൂടിയുള്ള സമനില</string>
-  <string name="fiftyMovesWithoutProgress">പുരോഗതിയില്ലാതെ 50 നീക്കങ്ങൾ</string>
+  <string name="fiftyMovesWithoutProgress">മുന്നേറ്റമില്ലാതെ അൻപതു് നീക്കങ്ങൾ</string>
   <string name="currentGames">ഇപ്പോഴത്തെ കളികൾ</string>
   <plurals name="nbGames">
     <item quantity="one">%s കളികൾ</item>
     <item quantity="other">%s കളികൾ</item>
+  </plurals>
+  <plurals name="ratingXOverYGames">
+    <item quantity="one">%2$s കളി മീതെ %1$s രേറ്റിങ്ങു്</item>
+    <item quantity="other">%2$s കളി മീതെ %1$s രേറ്റിങ്ങു്</item>
   </plurals>
   <plurals name="nbBookmarks">
     <item quantity="one">%s സൂചികകൾ</item>
@@ -177,7 +181,7 @@
   <string name="signIn">പ്രവേശിക്കൽ</string>
   <string name="rememberMe">എന്നേ നിർഗമിക്കരുത്</string>
   <string name="youNeedAnAccountToDoThat">ഇത് ചെയ്യണമെങ്കില്‍ നിങ്ങള്‍ക്ക് ഒരു അക്കൗണ്ട്‌ വേണം</string>
-  <string name="signUp">രജിസ്റ്റര്‍</string>
+  <string name="signUp">ചേരുക</string>
   <string name="computersAreNotAllowedToPlay">കമ്പ്യൂട്ടറുകള്‍ക്കും കമ്പ്യൂട്ടര്‍ സഹായമുള്ള കളിക്കാര്‍ക്കും കളിക്കാന്‍ അനുവാദമില്ല. ദയവായി കളിക്കിടെ ചെസ്സ്‌ എഞ്ചിനുകളുടെയോ ഡാറ്റാബേസുകളുടെയോ മറ്റു കളിക്കാരുടെയോ സഹായം തേടരുത്. നിരവധി അക്കൗണ്ടുകളുണ്ടാക്കുന്നത് ശക്തമായി നിരുത്സാഹപ്പെടുത്തുകയും അങ്ങനെ ചെയ്താല്‍ വിലക്കേര്‍പ്പെടുത്തും എന്നും പ്രത്യേകം ശ്രദ്ധിക്കുക.</string>
   <string name="games">കളികള്‍</string>
   <string name="forum">ചർച്ചാവേദി</string>
@@ -332,7 +336,7 @@
     <item quantity="one">%s കളിക്കുന്നു</item>
     <item quantity="other">%s കളിക്കുന്നു</item>
   </plurals>
-  <string name="exportGames">മത്സരങ്ങള്‍ ഡൗന്‍ലോഡ് ചെയ്യുക</string>
+  <string name="exportGames">കളികൾ ഇറക്കിവയ്ക്കുക</string>
   <string name="ratingRange">റേറ്റിംഗ് പരിധി</string>
   <plurals name="giveNbSeconds">
     <item quantity="one">%s നിമിഷങ്ങൾ നൽകുക</item>
@@ -411,7 +415,7 @@
   <string name="fromPosition">സ്ഥാനത്തു നിന്ന്</string>
   <string name="continueFromHere">ഇവിടെ മുതല്‍ പുനരാരംഭിക്കുക</string>
   <string name="toStudy">പഠനം</string>
-  <string name="importGame">മത്സരം അപ്പ്‌ലോഡ് ചെയ്യുക</string>
+  <string name="importGame">കളി ഇറക്കുമതി ചെയ്യുക</string>
   <string name="importGameExplanation">ഒരു ഗെയിം PGN പേസ്റ്റ് ചെയ്യുമ്പോൾ ബ്രൗസ്‌ ചെയ്യാൻ പറ്റുന്ന റീപ്ലേ, കമ്പ്യൂട്ടർ വിശകലനം, ഗെയിം ചാറ്റ്, ഷെയർ ചെയ്യാൻ പറ്റുന്ന ഒരു URL എന്നിവ ലഭിക്കുന്നു.</string>
   <string name="importGameCaveat">വ്യതിയാനങ്ങൾ മായ്ക്കപ്പെടും. അവയെ വയ്ക്കാനായി PGN ഒരു പഠനം വഴി ഇറക്കുമതിക്കുക.</string>
   <string name="importGameDataPrivacyWarning">ഈ PGN എല്ലാവൎക്കും കാണാം. ഈ കളി സ്വകാര്യമായി ഇറക്കുമതിക്കാൻ ഒരു പഠനം ഉപയോഗിക്കുക.</string>
@@ -529,8 +533,8 @@
   <string name="bewareTheGameIsRatedButHasNoClock">നോക്കൂ, ഈ കളി ക്രമപ്പെടുത്തിയതാണ്. പക്ഷെ സമയ പരിധിയില്ല!</string>
   <string name="success">വിജയകരം</string>
   <plurals name="nbGamesInPlay">
-    <item quantity="one">%s കളികൾ പുരോഗമിക്കുന്നു</item>
-    <item quantity="other">%s കളികൾ പുരോഗമിക്കുന്നു</item>
+    <item quantity="one">%s കളികൾ നടപ്പിലാണു്</item>
+    <item quantity="other">%s കളികൾ നടപ്പിലാണു്</item>
   </plurals>
   <string name="automaticallyProceedToNextGameAfterMoving">നീക്കത്തിന് ശേഷം അടുത്ത കളിയിലേക്ക് താനെ തുടരാം</string>
   <string name="autoSwitch">ഓട്ടോ സ്വിച്ച്</string>
@@ -568,8 +572,8 @@
   <string name="importedByX">%s ഇറക്കുമതി ചെയ്തത്</string>
   <string name="thisTopicIsNowClosed">ഈ വിഷയം സമാപിച്ചിരിക്കുന്നു.</string>
   <string name="blog">രചന</string>
-  <string name="notes">അറിയിപ്പുകൾ</string>
-  <string name="typePrivateNotesHere">സ്വകാര്യ അറിയിപ്പുകൾ ഇവിടെ ടൈപ്പ് ചെയ്യുക</string>
+  <string name="notes">കുറിപ്പുകൾ</string>
+  <string name="typePrivateNotesHere">സ്വകാര്യ അറിയിപ്പുകൾ ഇവിടെ എഴുതുക</string>
   <string name="writeAPrivateNoteAboutThisUser">ഈ ഉപയോക്താവിനകുറച്ചു് ഒരു സ്വകാര്യകുറിപ്പു് എഴുത്തുക</string>
   <string name="noNoteYet">ഇതുവരെ ഒരു കുറിപ്പുമില്ല</string>
   <string name="invalidUsernameOrPassword">യൂസർ നെയിം അല്ലെങ്കിൽ പാസ്സ്‌വേർഡ്‌ അസാധുവാണ്</string>
@@ -774,6 +778,7 @@
   <string name="onlineAndOfflinePlay">ഓൺലൈനും ഓഫ്‌ലൈനും കളികൾ</string>
   <string name="viewTheSolution">പരിഹാരം കാണുക</string>
   <string name="followAndChallengeFriends">പിന്തുടരൂ എന്നിട്ടു സുഹൃത്തുക്കളോട് വെല്ലുവിളിക്കൂ</string>
+  <string name="noChallenges">വെല്ലുവിളികളൊന്നുമില്ല.</string>
   <plurals name="availableInNbLanguages">
     <item quantity="one">%s ഭാഷകളിൽ ലഭ്യമാണ്!</item>
     <item quantity="other">%s ഭാഷകളിൽ ലഭ്യമാണ്!</item>
@@ -872,7 +877,7 @@
   </plurals>
   <string name="showUnreadLichessMessage">താങ്ങൾക്കു് Lichess നിന്നു് ഒരു സ്വകാര്യ അറിയിപ്പു് കിട്ടിയിരിക്കുന്നു.</string>
   <string name="clickHereToReadIt">വായ്ക്കാൻ ഇവിടെ അമർത്തിക്കുക</string>
-  <string name="sorry">ക്ഷമിക്കുക :(</string>
+  <string name="sorry">പൊറുക്കണം :(</string>
   <string name="weHadToTimeYouOutForAWhile">ഞങ്ങൾക്ക് നിങ്ങളെ കുറച്ചു സമയം പുറത്തു നിർത്തേണ്ടി വന്നു.</string>
   <string name="why">എന്തുകൊണ്ട്?</string>
   <string name="pleasantChessExperience">ഞങ്ങൾ എല്ലാവര്ക്കും സുഗമമായ ചെസ്സ് അനുഭവം നൽകാൻ ലക്ഷ്യമിടുന്നു.</string>
@@ -916,7 +921,7 @@
   <string name="thisTopicIsArchived">ഈ വിഷയം ത്തിനു മറുപടി കൊടുക്കാൻ കഴിയുകയയില്ല.</string>
   <string name="joinTheTeamXToPost">%1$s ഇൽ ചേരുക, ഫോറത്തിൽ പോസ്റ്റ്‌ ചെയുന്നതിനു</string>
   <string name="teamNamedX">%1$s ടീം</string>
-  <string name="youCannotPostYetPlaySomeGames">ഇപ്പോൾ ഈ ഫോറത്തിൽ നിങ്ങൾക്കു പോസ്റ്റ്‌ ചെയ്യാൻ കഴിയുകയില്ല കുറച്ചു ഗ്യാമുകൾക്കു ശേഷം ശ്രമിക്കുക!</string>
+  <string name="youCannotPostYetPlaySomeGames">ഇപ്പോൾ ഈ ചൎച്ചവേദിയിൽ താങ്ങൾക്കു പ്രേഷണം ചെയ്യാൻ കഴിയുകയില്ല കുറച്ചു കളികൾക്കു് ശേഷം ശ്രമിക്കുക!</string>
   <string name="subscribe">പേരെഴുതുക</string>
   <string name="unsubscribe">പേർമാറ്റുക</string>
   <string name="mentionedYouInX">%1$s ഇൽ നിങ്ങളെ പരാമർശിച്ചു.</string>
@@ -965,10 +970,7 @@
   <string name="analysisOptions">വിശകലനം സാധ്യതകൾ</string>
   <string name="focusChat">ഏകാഗ്രസല്ലാപമുറി</string>
   <string name="showHelpDialog">തുണസന്ദേശപെട്ടി കാണിക്കുക</string>
-  <string name="reopenYourAccount">അക്കൌണ്ട് വീണ്ടും തുറക്കുക</string>
-  <string name="closedAccountChangedMind">താങ്ങൾ അക്കൗണ്ടു് അവസാനിച്ചിട്ടു് പിന്നെയും തുറക്കാൻ ആഗ്രഹം ഉണ്ടെങ്കിൽ താങ്ങൾക്കു് ഇതു് ഒരു വട്ടം ചെയ്യാം.</string>
-  <string name="onlyWorksOnce">ഇത് ഒരു വട്ടമേ നടക്കും.</string>
-  <string name="cantDoThisTwice">താങ്ങൾ രണ്ടാം തവണ അവസാനിച്ചാൽ പിന്നെ വീണ്ടെടുപ്പു് ഒക്കത്തില്ല.</string>
+  <string name="reopenYourAccount" comment="Appears on the page where players can reopen their closed account - https://lichess.org/account/reopen (you can only see this when you logged out).">അക്കൌണ്ട് വീണ്ടും തുറക്കുക</string>
   <string name="emailAssociatedToaccount">ഈ അക്കൌണ്ടുബന്ധിത ഇ-തപാൽ വിലാസം</string>
   <string name="sentEmailWithLink">ഞങ്ങൾ താങ്ങളേ ഒരു കണ്ണിയുള്ള ഇമെയിൽ അയച്ചിട്ടുണ്ട്.</string>
   <string name="tournamentEntryCode">മത്സരം പ്രവേശന സങ്കേതം</string>

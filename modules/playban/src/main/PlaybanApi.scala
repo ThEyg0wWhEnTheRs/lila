@@ -18,6 +18,7 @@ final class PlaybanApi(
     userApi: lila.core.user.UserApi,
     noteApi: lila.core.user.NoteApi,
     cacheApi: lila.memo.CacheApi,
+    userTrustApi: lila.core.security.UserTrustApi,
     messenger: MsgApi
 )(using ec: Executor, mode: play.api.Mode):
 
@@ -28,14 +29,16 @@ final class PlaybanApi(
   private given BSONDocumentHandler[TempBan]    = Macros.handler
   private given BSONDocumentHandler[UserRecord] = Macros.handler
 
+  lila.common.Bus.sub[lila.core.user.UserDelete]: del =>
+    coll.delete.one($id(del.id)).void
+
   private def blameableSource(game: Game): Boolean = game.source.exists: s =>
     s == Source.Lobby || s == Source.Pool || s == Source.Arena
 
   private def blameable(game: Game): Fu[Boolean] =
-    (blameableSource(game) && game.hasClock).so {
+    (blameableSource(game) && game.hasClock).so:
       if game.rated then fuTrue
       else userApi.containsEngine(game.userIds).not
-    }
 
   private def IfBlameable[A: alleycats.Zero](game: Game)(f: => Fu[A]): Fu[A] =
     (mode.notProd || Uptime.startedSinceMinutes(10)).so:
@@ -214,13 +217,12 @@ final class PlaybanApi(
 
   val rageSitOf: lila.core.playban.RageSitOf = userId => rageSitCache.get(userId)
 
-  private val rageSitCache = cacheApi[UserId, RageSitCounter](65_536, "playban.ragesit") {
+  private val rageSitCache = cacheApi[UserId, RageSitCounter](65_536, "playban.ragesit"):
     _.expireAfterAccess(10.minutes)
       .buildAsyncFuture: userId =>
         coll
           .primitiveOne[RageSitCounter]($doc("_id" -> userId, "c".$exists(true)), "c")
           .map(_ | RageSit.empty)
-  }
 
   private def save(
       outcome: Outcome,
@@ -257,8 +259,9 @@ final class PlaybanApi(
   }.void.logFailure(lila.log("playban"))
 
   private def legiferate(record: UserRecord, age: Days, source: Option[Source]): Fu[UserRecord] = for
+    trust <- userTrustApi.get(record.userId)
     newRec <- record
-      .bannable(age)
+      .bannable(age, trust)
       .ifFalse(record.banInEffect)
       .so: ban =>
         lila.mon.playban.ban.count.increment()

@@ -9,7 +9,12 @@ export const bind = (ctrl: AnalyseCtrl) => {
   let shiftAlone = 0;
   document.addEventListener('keydown', e => e.key === 'Shift' && (shiftAlone = e.location));
   document.addEventListener('keyup', e => {
-    if (e.key === 'Shift' && e.location === shiftAlone) {
+    if (
+      e.key === 'Shift' &&
+      e.location === shiftAlone &&
+      !document.activeElement?.classList.contains('mchat__say')
+    ) {
+      // hilities confound ddugovic when he fails to capitalize a letter in chat
       if (shiftAlone === 1 && ctrl.fork.prev()) ctrl.setAutoShapes();
       else if (shiftAlone === 2 && ctrl.fork.next()) ctrl.setAutoShapes();
       else if (shiftAlone === 0) return;
@@ -72,7 +77,9 @@ export const bind = (ctrl: AnalyseCtrl) => {
       if (ctrl.keyboardHelp) pubsub.emit('analysis.closeAll');
       ctrl.redraw();
     })
-    .bind('l', ctrl.toggleCeval)
+    .bind('l', () => {
+      if (ctrl.ceval.analysable) ctrl.toggleCeval();
+    })
     .bind('z', () => {
       ctrl.toggleComputer();
       ctrl.redraw();
@@ -110,8 +117,8 @@ export const bind = (ctrl: AnalyseCtrl) => {
   //First explorer move
   kbd.bind('shift+space', () => {
     const move = document
-      .querySelector('.explorer-box:not(.loading) .moves tbody tr')
-      ?.attributes.getNamedItem('data-uci')?.value;
+      .querySelector('.explorer-box:not(.loading) tbody tr[data-uci]')
+      ?.getAttribute('data-uci');
     if (move) ctrl.explorerMove(move);
   });
 

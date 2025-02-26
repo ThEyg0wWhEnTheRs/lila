@@ -32,23 +32,24 @@ final class Study(
 
   def search(text: String, page: Int) = OpenOrScopedBody(parse.anyContent)(_.Study.Read, _.Web.Mobile):
     Reasonable(page):
-      if text.trim.isEmpty then
-        for
-          pag <- env.study.pager.all(Orders.default, page)
-          _   <- preloadMembers(pag)
-          res <- negotiate(
-            Ok.page(views.study.list.all(pag, Orders.default)),
-            apiStudies(pag)
-          )
-        yield res
-      else
-        env
-          .studySearch(ctx.me)(text.take(100), page)
-          .flatMap: pag =>
-            negotiate(
-              Ok.page(views.study.list.search(pag, text)),
+      text.trim.some.filter(_.nonEmpty).filter(_.sizeIs > 2).filter(_.sizeIs < 200) match
+        case None =>
+          for
+            pag <- env.study.pager.all(Orders.default, page)
+            _   <- preloadMembers(pag)
+            res <- negotiate(
+              Ok.page(views.study.list.all(pag, Orders.default)),
               apiStudies(pag)
             )
+          yield res
+        case Some(clean) =>
+          env
+            .studySearch(clean.take(100), page)
+            .flatMap: pag =>
+              negotiate(
+                Ok.page(views.study.list.search(pag, text)),
+                apiStudies(pag)
+              )
 
   def homeLang = LangPage(routes.Study.allDefault())(allResults(Order.hot, 1))
 
@@ -280,13 +281,11 @@ final class Study(
       Ok(env.study.jsonView.chapterConfig(chapter))
 
   private[controllers] def chatOf(study: lila.study.Study)(using ctx: Context) = {
-    ctx.kid.no && ctx.noBot &&               // no public chats for kids and bots
-    ctx.me.forall(env.chat.panic.allowed(_)) // anon can see public chats
-  }.soFu(
+    ctx.kid.no && ctx.noBot // no public chats for kids and bots
+  }.soFu:
     env.chat.api.userChat
       .findMine(study.id.into(ChatId))
       .mon(_.chat.fetch("study"))
-  )
 
   def createAs = AuthBody { ctx ?=> me ?=>
     bindForm(StudyForm.importGame.form)(
@@ -380,18 +379,16 @@ final class Study(
 
   def embed(studyId: StudyId, chapterId: StudyChapterId) = Anon:
     InEmbedContext:
-      val studyFu =
-        if chapterId.value == "autochap"
-        then env.study.api.byIdWithChapter(studyId)
-        else env.study.api.byIdWithChapterOrFallback(studyId, chapterId)
       def notFound = NotFound.snip(views.study.embed.notFound)
-      studyFu
+      env.study.api
+        .byId(studyId)
         .flatMap:
-          _.fold(notFound.toFuccess): sc =>
+          _.fold(notFound.toFuccess): study =>
+            val finalChapterId = if chapterId.value == "autochap" then study.position.chapterId else chapterId
             env.api.textLpvExpand
-              .getChapterPgn(sc.chapter.id)
+              .getChapterPgn(finalChapterId)
               .map:
-                case Some(LpvEmbed.PublicPgn(pgn)) => Ok.snip(views.study.embed(sc.study, sc.chapter, pgn))
+                case Some(LpvEmbed.PublicPgn(pgn)) => Ok.snip(views.study.embed(study, finalChapterId, pgn))
                 case _                             => notFound
 
   def cloneStudy(id: StudyId) = Auth { ctx ?=> _ ?=>
@@ -456,17 +453,18 @@ final class Study(
       studyUnauthorized: StudyModel => Fu[Result],
       studyForbidden: StudyModel => Fu[Result]
   )(using ctx: Context) =
-    env.study.api.byIdWithChapter(id, chapterId).flatMap {
-      _.fold(studyNotFound) { case WithChapter(study, chapter) =>
-        CanView(study) {
-          env.study.pgnDump.ofChapter(study, requestPgnFlags)(chapter).map { pgn =>
-            Ok(pgn.toString)
-              .pipe(asAttachment(s"${env.study.pgnDump.filename(study, chapter)}.pgn"))
-              .as(pgnContentType)
-          }
-        }(studyUnauthorized(study), studyForbidden(study))
-      }
-    }
+    env.study.api
+      .byIdWithChapter(id, chapterId)
+      .flatMap:
+        _.fold(studyNotFound) { case WithChapter(study, chapter) =>
+          CanView(study) {
+            env.study.pgnDump.ofChapter(study, requestPgnFlags)(chapter).map { pgn =>
+              Ok(pgn.toString)
+                .pipe(asAttachment(s"${env.study.pgnDump.filename(study, chapter)}.pgn"))
+                .as(pgnContentType)
+            }
+          }(studyUnauthorized(study), studyForbidden(study))
+        }
 
   def exportPgn(username: UserStr) = OpenOrScoped(_.Study.Read, _.Web.Mobile): ctx ?=>
     val name =
@@ -527,11 +525,12 @@ final class Study(
         env.study.topicApi.findLike(term, getUserStr("user").map(_.id)).map { JsonOk(_) }
 
   def topics = Open:
-    env.study.topicApi.popular(50).zip(ctx.userId.soFu(env.study.topicApi.userTopics)).flatMap {
-      (popular, mine) =>
+    env.study.topicApi
+      .popular(50)
+      .zip(ctx.userId.soFu(env.study.topicApi.userTopics))
+      .flatMap: (popular, mine) =>
         val form = mine.map(StudyForm.topicsForm)
         Ok.page(views.study.list.topic.index(popular, mine, form))
-    }
 
   def setTopics = AuthBody { ctx ?=> me ?=>
     bindForm(StudyForm.topicsForm)(

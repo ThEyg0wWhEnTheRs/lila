@@ -25,14 +25,9 @@ final class TournamentList(helpers: Helpers, ui: TournamentUi)(
     Page(trans.site.tournaments.txt())
       .css("tournament.home")
       .js(infiniteScrollEsmInit)
-      .js(
-        PageModule(
-          "tournament.schedule",
-          Json.obj("data" -> json)
-        )
-      )
+      .js(PageModule("tournament.schedule", Json.obj("data" -> json)))
       .hrefLangs(LangPath(routes.Tournament.home))
-      .fullScreen
+      .flag(_.fullScreen)
       .graph(
         url = s"$netBaseUrl${routes.Tournament.home.url}",
         title = trans.site.tournamentHomeTitle.txt(),
@@ -68,11 +63,11 @@ final class TournamentList(helpers: Helpers, ui: TournamentUi)(
             div(cls := "scheduled")(
               scheduled.map: tour =>
                 tour.schedule
-                  .filter(s => s.freq != Freq.Hourly)
+                  .filter(_.freq != Freq.Hourly)
                   .map: s =>
                     a(href := routes.Tournament.show(tour.id), dataIcon := ui.tournamentIcon(tour))(
                       strong(tour.name(full = false)),
-                      momentFromNow(s.atInstant)
+                      momentFromNow(tour.startsAt)
                     )
             )
           ),
@@ -139,10 +134,10 @@ final class TournamentList(helpers: Helpers, ui: TournamentUi)(
         )
 
   def homepageSpotlight(tour: Tournament)(using Context) =
-    val schedClass = tour.schedule.so: sched =>
-      val invert  = (sched.freq.isWeeklyOrBetter && tour.isNowOrSoon).so(" invert")
+    val schedClass = tour.scheduleData.so: (freq, speed) =>
+      val invert  = (freq.isWeeklyOrBetter && tour.isNowOrSoon).so(" invert")
       val distant = tour.isDistant.so(" distant little")
-      s"${sched.freq} ${sched.speed} ${sched.variant.key}$invert$distant"
+      s"$freq $speed ${tour.variant.key}$invert$distant"
     val tourClass = s"tour-spotlight id_${tour.id} $schedClass"
     tour.spotlight
       .map { spot =>
@@ -263,7 +258,7 @@ final class TournamentList(helpers: Helpers, ui: TournamentUi)(
       )
       Page("Tournament leaderboard")
         .css("tournament.leaderboard")
-        .fullScreen:
+        .flag(_.fullScreen):
           main(cls := "page-menu")(
             communityMenu,
             div(cls := "page-menu__content box box-pad")(
@@ -293,7 +288,7 @@ final class TournamentList(helpers: Helpers, ui: TournamentUi)(
     def apply(history: TournamentShield.History)(using Context) =
       Page("Tournament shields")
         .css("tournament.leaderboard")
-        .fullScreen:
+        .flag(_.fullScreen):
           main(cls := "page-menu")(
             shieldMenu,
             div(cls := "page-menu__content box box-pad")(

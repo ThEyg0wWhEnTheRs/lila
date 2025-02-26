@@ -30,7 +30,7 @@ final class Mod(
     withSuspect(username): sus =>
       for
         _ <- api.setAlt(sus, v)
-        _ <- (v && sus.user.enabled.yes).so(env.api.accountClosure.close(sus.user))
+        _ <- (v && sus.user.enabled.yes).so(env.api.accountTermination.disable(sus.user, forever = false))
         _ <- (!v && sus.user.enabled.no).so(api.reopenAccount(sus.user.id))
       yield sus.some
   }(reportC.onModAction)
@@ -40,7 +40,9 @@ final class Mod(
     Source(ctx.body.body.split(' ').toList.flatMap(UserStr.read))
       .mapAsync(1): username =>
         withSuspect(username): sus =>
-          api.setAlt(sus, true) >> (sus.user.enabled.yes.so(env.api.accountClosure.close(sus.user)))
+          api.setAlt(sus, true) >> (sus.user.enabled.yes.so(
+            env.api.accountTermination.disable(sus.user, forever = false)
+          ))
       .runWith(Sink.ignore)
       .void
       .inject(NoContent)
@@ -114,7 +116,7 @@ final class Mod(
 
   def closeAccount(username: UserStr) = OAuthMod(_.CloseAccount) { _ ?=> me ?=>
     meOrFetch(username).flatMapz: user =>
-      env.api.accountClosure.close(user).map(some)
+      env.api.accountTermination.disable(user, forever = false).map(some)
   }(actionResult(username))
 
   def reopenAccount(username: UserStr) = OAuthMod(_.CloseAccount) { _ ?=> me ?=>
@@ -179,30 +181,31 @@ final class Mod(
   }
 
   def inquiryToZulip = Secure(_.SendToZulip) { _ ?=> me ?=>
-    env.report.api.inquiries.ofModId(me.id).flatMap {
-      case None => Redirect(routes.Report.list)
-      case Some(report) =>
-        Found(env.user.repo.byId(report.user)): user =>
-          import lila.report.Room
-          import lila.core.irc.ModDomain
-          env.irc.api
-            .inquiry(
-              user = user.light,
-              domain = report.room match
-                case Room.Cheat => ModDomain.Cheat
-                case Room.Boost => ModDomain.Boost
-                case Room.Comm  => ModDomain.Comm
-                // spontaneous inquiry
-                case _ if isGranted(_.Admin)       => ModDomain.Admin
-                case _ if isGranted(_.CheatHunter) => ModDomain.Cheat // heuristic
-                case _ if isGranted(_.Shusher)     => ModDomain.Comm
-                case _ if isGranted(_.BoostHunter) => ModDomain.Boost
-                case _                             => ModDomain.Admin
-              ,
-              room = if report.isSpontaneous then "Spontaneous inquiry" else report.room.name
-            )
-            .inject(NoContent)
-    }
+    env.report.api.inquiries
+      .ofModId(me.id)
+      .flatMap:
+        case None => Redirect(routes.Report.list)
+        case Some(report) =>
+          Found(env.user.repo.byId(report.user)): user =>
+            import lila.report.Room
+            import lila.core.irc.ModDomain
+            env.irc.api
+              .inquiry(
+                user = user.light,
+                domain = report.room match
+                  case Room.Cheat => ModDomain.Cheat
+                  case Room.Boost => ModDomain.Boost
+                  case Room.Comm  => ModDomain.Comm
+                  // spontaneous inquiry
+                  case _ if isGranted(_.Admin)       => ModDomain.Admin
+                  case _ if isGranted(_.CheatHunter) => ModDomain.Cheat // heuristic
+                  case _ if isGranted(_.Shusher)     => ModDomain.Comm
+                  case _ if isGranted(_.BoostHunter) => ModDomain.Boost
+                  case _                             => ModDomain.Admin
+                ,
+                room = if report.isSpontaneous then "Spontaneous inquiry" else report.room.name
+              )
+              .inject(NoContent)
   }
 
   def createNameCloseVote(username: UserStr) = Secure(_.SendToZulip) { _ ?=> me ?=>
@@ -325,22 +328,22 @@ final class Mod(
   def spontaneousInquiry(username: UserStr) = Secure(_.SeeReport) { ctx ?=> me ?=>
     Found(env.user.repo.byId(username)): user =>
       (getBool("appeal") && isGranted(_.Appeals)).so(env.appeal.api.exists(user)).flatMap { isAppeal =>
-        isAppeal.so(env.report.api.inquiries.ongoingAppealOf(user.id)).flatMap {
-          case Some(ongoing) if ongoing.mod != me.id =>
-            env.user.lightUserApi
-              .asyncFallback(ongoing.mod)
-              .map: mod =>
-                Redirect(routes.Appeal.show(user.username))
-                  .flashFailure(s"Currently processed by ${mod.name}")
-          case _ =>
-            val f =
-              if isAppeal then env.report.api.inquiries.appeal
-              else env.report.api.inquiries.spontaneous
-            f(Suspect(user)).inject {
-              if isAppeal then Redirect(s"${routes.Appeal.show(user.username)}#appeal-actions")
-              else redirect(user.username, mod = true)
-            }
-        }
+        isAppeal
+          .so(env.report.api.inquiries.ongoingAppealOf(user.id))
+          .flatMap:
+            case Some(ongoing) if ongoing.mod != me.id =>
+              env.user.lightUserApi
+                .asyncFallback(ongoing.mod)
+                .map: mod =>
+                  Redirect(routes.Appeal.show(user.username))
+                    .flashFailure(s"Currently processed by ${mod.name}")
+            case _ =>
+              val f =
+                if isAppeal then env.report.api.inquiries.appeal
+                else env.report.api.inquiries.spontaneous
+              f(Suspect(user)).inject:
+                if isAppeal then Redirect(s"${routes.Appeal.show(user.username)}#appeal-actions")
+                else redirect(user.username, mod = true)
       }
   }
 
@@ -372,7 +375,7 @@ final class Mod(
   }
 
   def search = SecureBody(_.UserSearch) { ctx ?=> me ?=>
-    bindForm(ModUserSearch.form)(err => BadRequest.page(views.mod.search(err, Nil)), searchTerm)
+    bindForm(ModUserSearch.form)(err => BadRequest.page(views.mod.search(err, none)), searchTerm)
   }
 
   def notes(page: Int, q: String) = Secure(_.Admin) { _ ?=> _ ?=>
@@ -380,13 +383,10 @@ final class Mod(
       env.user.noteApi.search(q.trim, page, withDox = true).map(views.mod.search.notes(q, _))
   }
 
-  def gdprErase(username: UserStr) = Secure(_.GdprErase) { _ ?=> me ?=>
-    val res = Redirect(routes.User.show(username))
-    env.api.accountClosure
-      .closeThenErase(username)
-      .map:
-        case Right(msg) => res.flashSuccess(msg)
-        case Left(err)  => res.flashFailure(err)
+  def gdprErase(username: UserStr) = Secure(_.GdprErase) { _ ?=> _ ?=>
+    Found(env.user.repo.byId(username)): user =>
+      for _ <- env.api.accountTermination.scheduleDelete(user)
+      yield Redirect(routes.User.show(username)).flashSuccess("Erasure scheduled")
   }
 
   protected[controllers] def searchTerm(query: String)(using Context, Me) =
@@ -394,8 +394,8 @@ final class Mod(
       case Some(ip) => Redirect(routes.Mod.singleIp(ip.value)).toFuccess
       case None =>
         for
-          users <- env.mod.search(query)
-          page  <- renderPage(views.mod.search(ModUserSearch.form.fill(query), users))
+          res  <- env.mod.search(query)
+          page <- renderPage(views.mod.search(ModUserSearch.form.fill(query), res.some))
         yield Ok(page)
 
   def print(fh: String) = SecureBody(_.ViewPrintNoIP) { ctx ?=> me ?=>
@@ -411,7 +411,7 @@ final class Mod(
 
   def printBan(v: Boolean, fh: String) = Secure(_.PrintBan) { _ ?=> me ?=>
     val hash = FingerHash(fh)
-    env.security.printBan.toggle(hash, v).inject(Redirect(routes.Mod.print(fh)))
+    for _ <- env.security.printBan.toggle(hash, v) yield Redirect(routes.Mod.print(fh))
   }
 
   def singleIp(ip: String) = SecureBody(_.ViewPrintNoIP) { ctx ?=> me ?=>
@@ -480,18 +480,19 @@ final class Mod(
         val email    = query.headOption.flatMap(EmailAddress.from)
         val username = query.lift(1)
         def tryWith(setEmail: EmailAddress, q: String): Fu[Option[Result]] =
-          env.mod.search(q).map(_.filter(_.user.enabled.yes)).flatMap {
-            case List(lila.user.WithPerfsAndEmails(user, _)) =>
-              for
-                _ <- (!user.everLoggedIn).so {
-                  lila.mon.user.register.modConfirmEmail.increment()
-                  api.setEmail(user.id, setEmail)
-                }
-                email <- env.user.repo.email(user.id)
-                page  <- renderPage(views.mod.ui.emailConfirm("", user.some, email))
-              yield Ok(page).some
-            case _ => fuccess(none)
-          }
+          env.mod
+            .search(q)
+            .map(_.users.filter(_.user.enabled.yes))
+            .flatMap:
+              case List(lila.user.WithPerfsAndEmails(user, _)) =>
+                for
+                  _ <- (!user.everLoggedIn).so:
+                    lila.mon.user.register.modConfirmEmail.increment()
+                    api.setEmail(user.id, setEmail.some)
+                  email <- env.user.repo.email(user.id)
+                  page  <- renderPage(views.mod.ui.emailConfirm("", user.some, email))
+                yield Ok(page).some
+              case _ => fuccess(none)
         email
           .so: em =>
             tryWith(em, em.value)
@@ -499,17 +500,6 @@ final class Mod(
               .recover(lila.db.recoverDuplicateKey(_ => none))
           .getOrElse(BadRequest.page(views.mod.ui.emailConfirm(rawQuery, none, none)))
   }
-
-  def chatPanic = Secure(_.Shadowban) { ctx ?=> _ ?=>
-    Ok.page(views.mod.ui.chatPanic(env.chat.panic.get))
-  }
-
-  def chatPanicPost = OAuthMod(_.Shadowban) { ctx ?=> me ?=>
-    val v = getBool("v")
-    env.chat.panic.set(v)
-    env.irc.api.chatPanic(v)
-    fuccess(().some)
-  }(_ => (_, _) ?=> Redirect(routes.Mod.chatPanic))
 
   def presets(group: String) = Secure(_.Presets) { ctx ?=> _ ?=>
     env.mod.presets

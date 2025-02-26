@@ -28,6 +28,9 @@ final class PerfStatStorage(coll: AsyncCollFailingSilently)(using Executor):
   def insert(perfStat: PerfStat): Funit =
     coll(_.insert.one(perfStat).void)
 
+  private[perfStat] def deleteAllFor(userId: UserId): Funit =
+    coll(_.delete.one($doc("_id".$regex(s"^$userId/"))).void)
+
   def update(a: PerfStat, b: PerfStat): Funit = coll: c =>
     val sets = $doc(
       docDiff(a.count, b.count).mapKeys(k => s"count.$k").toList :::
@@ -93,9 +96,8 @@ final class PerfStatStorage(coll: AsyncCollFailingSilently)(using Executor):
 
   private def docDiff[T: BSONDocumentWriter](a: T, b: T): Map[String, BSONValue] =
     val (am, bm) = (docMap(a), docMap(b))
-    bm.collect {
+    bm.collect:
       case (field, v) if am.get(field).forall(_ != v) => field -> v
-    }
 
   private def docMap[T](a: T)(using writer: BSONDocumentWriter[T]) =
     writer.writeTry(a).get.toMap

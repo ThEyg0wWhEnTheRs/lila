@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-  <string name="playWithAFriend">Играјте са пријатељем</string>
-  <string name="playWithTheMachine">Играјте са рачунаром</string>
-  <string name="toInviteSomeoneToPlayGiveThisUrl">Да позовете неког да игра, дајте овaј линк</string>
+  <string name="playWithAFriend">Играј са пријатељем</string>
+  <string name="playWithTheMachine">Играј са рачунаром</string>
+  <string name="toInviteSomeoneToPlayGiveThisUrl">Да позовеш некога да игра, проследи овaј линк</string>
   <string name="gameOver">Партија Завршена</string>
   <string name="waitingForOpponent">Чека се противник</string>
   <string name="orLetYourOpponentScanQrCode">Или допусти свом противнику да копира овај QR код</string>
   <string name="waiting">Чека се</string>
-  <string name="yourTurn">Ваш потез</string>
+  <string name="yourTurn">Твој потез</string>
   <string name="aiNameLevelAiLevel">%1$s ниво %2$s</string>
   <string name="level">Ниво</string>
   <string name="strength">Јачина</string>
   <string name="toggleTheChat">Укључи/искључи ћаскање</string>
-  <string name="chat">Ћаскање</string>
+  <string name="chat">Ћаскај</string>
   <string name="resign">Предај</string>
   <string name="checkmate">Шах-мат</string>
   <string name="stalemate">Пат</string>
@@ -130,17 +130,17 @@
   <string name="blunder">Груба грешка</string>
   <string name="mistake">Грешка</string>
   <string name="inaccuracy">Непрецизност</string>
-  <plurals name="numberBlunders" comment="Appears on computer analysis results.&#10;&#10;Please note this string was updated to start with a capital letter. It previously had &quot;blunder&quot; in lowercase. It was pre-translated, but the translation memory may have chosen &quot;Blunder&quot; from another string, so please update as required.">
+  <plurals name="numberBlunders">
     <item quantity="one">%s Превид</item>
     <item quantity="few">%s Грубе грешке</item>
     <item quantity="other">%s Грубе грешке</item>
   </plurals>
-  <plurals name="numberMistakes" comment="Appears on computer analysis results.&#10;&#10;Please note this string was updated to start with a capital letter. It previously had &quot;mistake&quot; in lowercase. It was pre-translated, but the translation memory may have chosen &quot;mistake&quot; from another string, so please update as required.">
+  <plurals name="numberMistakes">
     <item quantity="one">%s Грешка</item>
     <item quantity="few">%s Грешке</item>
     <item quantity="other">%s Грешке</item>
   </plurals>
-  <plurals name="numberInaccuracies" comment="Appears on computer analysis results.&#10;&#10;Please note this string was updated to start with a capital letter. It previously had &quot;inaccuracy&quot; in lowercase. It was pre-translated, but the translation memory may have chosen &quot;Inaccuracy&quot; from another string, so please update as required.">
+  <plurals name="numberInaccuracies">
     <item quantity="one">%s Непрецизност</item>
     <item quantity="few">%s Непрецизности</item>
     <item quantity="other">%s Непрецизности</item>
@@ -961,10 +961,7 @@
   <string name="analysisOptions">Опције при анализи</string>
   <string name="focusChat">Пређи на чет</string>
   <string name="showHelpDialog">Прикажи овај прозор за помоћ</string>
-  <string name="reopenYourAccount">Поново отвори свој налог</string>
-  <string name="closedAccountChangedMind">Ако си затворио налог, али си се после предомислио, имаш једну прилику да повратиш свој налог.</string>
-  <string name="onlyWorksOnce">Ово ће радити само једном.</string>
-  <string name="cantDoThisTwice">Ако си затворио налог по други пут, не постоји начин да га повратиш.</string>
+  <string name="reopenYourAccount" comment="Appears on the page where players can reopen their closed account - https://lichess.org/account/reopen (you can only see this when you logged out).">Поново отвори свој налог</string>
   <string name="emailAssociatedToaccount">Мејл адреса повезана са налогом</string>
   <string name="sentEmailWithLink">Послали смо ти мејл са линком.</string>
   <string name="tournamentEntryCode">Код за приступ турниру</string>

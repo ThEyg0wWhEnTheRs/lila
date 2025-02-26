@@ -34,7 +34,7 @@ final class ModApi(
     yield if v then notifier.reporters(me.modId, sus)
 
   def setEngine(prev: Suspect, v: Boolean)(using me: MyId): Funit =
-    (prev.user.marks.engine != v).so {
+    (prev.user.marks.engine != v).so:
       for
         _ <- userRepo.setEngine(prev.user.id, v)
         sus = prev.set(_.withMarks(_.set(_.engine, v)))
@@ -44,19 +44,17 @@ final class ModApi(
         if v then
           notifier.reporters(me.modId, sus)
           refunder.schedule(sus)
-    }
 
   def autoMark(suspectId: SuspectId, note: String)(using MyId): Funit =
     for
       sus       <- reportApi.getSuspect(suspectId.value).orFail(s"No such suspect $suspectId")
       unengined <- logApi.wasUnengined(sus)
-      _ <- (!sus.user.isBot && !sus.user.marks.engine && !unengined).so {
+      _ <- (!sus.user.isBot && !sus.user.marks.engine && !unengined).so:
         reportApi.getMyMod.flatMapz: mod =>
           lila.mon.cheat.autoMark.increment()
           setEngine(sus, v = true) >>
             noteApi.lichessWrite(sus.user, note) >>
             reportApi.autoProcess(sus, Set(Room.Cheat, Room.Print))
-      }
     yield ()
 
   def setBoost(prev: Suspect, v: Boolean)(using me: Me): Fu[Suspect] =
@@ -123,7 +121,10 @@ final class ModApi(
   def reopenAccount(username: UserStr)(using Me): Funit =
     withUser(username): user =>
       user.enabled.no.so:
-        userRepo.reopen(user.id) >> logApi.reopenAccount(user.id)
+        for _ <- userRepo.reopen(user.id)
+        yield
+          Bus.pub(lila.core.security.ReopenAccount(user))
+          logApi.reopenAccount(user.id)
 
   def setKid(mod: ModId, username: UserStr): Funit =
     withUser(username): user =>
@@ -149,11 +150,16 @@ final class ModApi(
             yield lightUserApi.invalidate(user.id)
           }
 
-  def setEmail(username: UserStr, email: EmailAddress)(using Me): Funit =
+  def setEmail(username: UserStr, emailOpt: Option[EmailAddress])(using Me): Funit =
     withUser(username): user =>
-      userRepo.setEmail(user.id, email) >>
-        userRepo.setEmailConfirmed(user.id) >>
-        logApi.setEmail(user.id)
+      for
+        prev <- userRepo.emailOrPrevious(user.id)
+        email = emailOpt | EmailAddress:
+          s"noreply.blanked.${username.id}${prev.fold("@nope.nope")("." + _)}"
+        _ <- userRepo.setEmail(user.id, email)
+        _ <- userRepo.setEmailConfirmed(user.id)
+        _ <- logApi.setEmail(user.id)
+      yield ()
 
   def setPermissions(username: UserStr, permissions: Set[Permission])(using Me): Funit =
     withUser(username): user =>
@@ -171,25 +177,21 @@ final class ModApi(
   }.toMap
 
   def setReportban(sus: Suspect, v: Boolean)(using MyId): Funit =
-    (sus.user.marks.reportban != v).so {
+    (sus.user.marks.reportban != v).so:
       userRepo.setReportban(sus.user.id, v) >> logApi.reportban(sus, v)
-    }
 
   def setRankban(sus: Suspect, v: Boolean)(using MyId): Funit =
-    (sus.user.marks.rankban != v).so {
+    (sus.user.marks.rankban != v).so:
       if v then Bus.publish(lila.core.mod.KickFromRankings(sus.user.id), "kickFromRankings")
       userRepo.setRankban(sus.user.id, v) >> logApi.rankban(sus, v)
-    }
 
   def setArenaBan(sus: Suspect, v: Boolean)(using MyId): Funit =
-    (sus.user.marks.arenaBan != v).so {
+    (sus.user.marks.arenaBan != v).so:
       userRepo.setArenaBan(sus.user.id, v) >> logApi.arenaBan(sus, v)
-    }
 
   def setPrizeban(sus: Suspect, v: Boolean)(using MyId): Funit =
-    (sus.user.marks.prizeban != v).so {
+    (sus.user.marks.prizeban != v).so:
       userRepo.setPrizeban(sus.user.id, v) >> logApi.prizeban(sus, v)
-    }
 
   def allMods =
     def timeNoSee(u: User): Duration = (nowMillis - (u.seenAt | u.createdAt).toMillis).millis

@@ -20,10 +20,11 @@ object email:
       def normalize = NormalizedEmailAddress: // changing normalization requires database migration!
         val lower = e.toLowerCase
         lower.split('@') match
-          case Array(name, domain) if EmailAddress.gmailLikeNormalizedDomains(domain) =>
-            val normalizedName = name
-              .replace(".", "")    // remove all dots
-              .takeWhile('+' != _) // skip everything after the first '+'
+          case Array(name, domain) =>
+            val skipAfterPlus = name.takeWhile('+' != _)
+            val normalizedName =
+              if EmailAddress.gmailLikeNormalizedDomains(domain) then skipAfterPlus.replace(".", "")
+              else skipAfterPlus
             if normalizedName.isEmpty then lower else s"$normalizedName@$domain"
           case _ => lower
 
@@ -39,7 +40,8 @@ object email:
         e.normalize.eliminateDomainAlias == other.normalize.eliminateDomainAlias
 
       def isNoReply  = e.startsWith("noreply.") && e.endsWith("@lichess.org")
-      def isSendable = !e.isNoReply
+      def isBlank    = e.startsWith("noreply.blanked.")
+      def isSendable = !e.isNoReply && !e.isBlank
 
       def looksLikeFakeEmail =
         e.domain.map(_.lower).exists(EmailAddress.gmailDomains.contains) &&
@@ -63,7 +65,8 @@ object email:
       Domain.Lower.from(Set("yandex.com", "yandex.ru", "ya.ru", "yandex.ua", "yandex.kz", "yandex.by"))
 
     // adding normalized domains requires database migration!
-    private val gmailLikeNormalizedDomains = gmailDomains ++ Set("protonmail.com", "protonmail.ch", "pm.me")
+    private val gmailLikeNormalizedDomains =
+      gmailDomains ++ Set("protonmail.com", "protonmail.ch", "pm.me", "proton.me")
 
     def isValid(str: String) =
       str.sizeIs < maxLength &&
@@ -79,9 +82,8 @@ object email:
   opaque type UserStrOrEmail = String
   object UserStrOrEmail extends OpaqueString[UserStrOrEmail]:
     extension (e: UserStrOrEmail)
-      def normalize = UserIdOrEmail(
+      def normalize: UserIdOrEmail =
         EmailAddress.from(e).fold(e.toLowerCase)(e => EmailAddress.normalize(e).value)
-      )
 
   opaque type UserIdOrEmail = String
   object UserIdOrEmail extends OpaqueString[UserIdOrEmail]

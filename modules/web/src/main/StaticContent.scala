@@ -16,9 +16,6 @@ Disallow: /games/export/
 Disallow: /api/
 Disallow: /opening/config/
 Allow: /game/export/gif/thumbnail/
-
-User-agent: Twitterbot
-Allow: /
 """
 
   def manifest(net: NetConfig) =
@@ -48,10 +45,11 @@ Allow: /
       )
     )
 
+  val mobileAndroidUrl = "https://play.google.com/store/apps/details?id=org.lichess.mobileV2"
+  val mobileIosUrl     = "https://apps.apple.com/us/app/lichess-free-online-chess/id968371784"
+
   def appStoreUrl(using req: RequestHeader) =
-    if HTTPRequest.isAndroid(req)
-    then "https://play.google.com/store/apps/details?id=org.lichess.mobileapp"
-    else "https://apps.apple.com/us/app/lichess-online-chess/id968371784"
+    if HTTPRequest.isAndroid(req) then mobileAndroidUrl else mobileIosUrl
 
   val variantsJson =
     JsArray(chess.variant.Variant.list.all.map { v =>
@@ -67,8 +65,7 @@ Allow: /
     "github"   -> "https://github.com/lichess-org",
     "discord"  -> "https://discord.gg/lichess",
     "bluesky"  -> "https://bsky.app/profile/lichess.org",
-    "twitter"  -> "https://twitter.com/lichess",
-    "youtube"  -> "https://youtube.com/c/LichessDotOrg",
+    "youtube"  -> "https://youtube.com/@LichessDotOrg",
     "twitch"   -> "https://www.twitch.tv/lichessdotorg"
   )
 

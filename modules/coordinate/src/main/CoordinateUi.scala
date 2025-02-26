@@ -3,7 +3,6 @@ package ui
 
 import play.api.libs.json.Json
 
-import lila.core.i18n.I18nKey
 import lila.ui.*
 
 import ScalatagsTemplate.*
@@ -25,8 +24,8 @@ final class CoordinateUi(helpers: Helpers):
           "Knowing the chessboard coordinates is a very important chess skill. A square name appears on the board and you must click on the correct square."
       )
       .hrefLangs(LangPath(routes.Coordinate.home))
-      .zoom
-      .zen
+      .flag(_.zoom)
+      .flag(_.zen)
       .body(preload)
 
   private val preload = main(id := "trainer")(

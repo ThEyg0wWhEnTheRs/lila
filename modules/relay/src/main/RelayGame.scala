@@ -18,23 +18,6 @@ case class RelayGame(
   override def toString =
     s"RelayGame ${root.mainlineNodeList.size} ${tags.outcome} ${tags.names} ${tags.fideIds}"
 
-  // We don't use tags.boardNumber.
-  // Organizers change it at any time while reordering the boards.
-  def isSameGame(otherTags: Tags): Boolean =
-    allSame(otherTags, RelayGame.eventTags) &&
-      otherTags.roundNumber == tags.roundNumber &&
-      playerTagsMatch(otherTags)
-
-  private def playerTagsMatch(otherTags: Tags): Boolean =
-    val bothHaveFideIds = List(otherTags, tags).forall: ts =>
-      RelayGame.fideIdTags.forall(side => ts(side).exists(_ != "0"))
-    if bothHaveFideIds
-    then allSame(otherTags, RelayGame.fideIdTags)
-    else allSame(otherTags, RelayGame.nameTags)
-
-  private def allSame(otherTags: Tags, tagNames: RelayGame.TagNames) = tagNames.forall: tag =>
-    otherTags(tag) == tags(tag)
-
   def isEmpty = tags.value.isEmpty && root.children.nodes.isEmpty
 
   def hasMoves = root.children.nodes.nonEmpty
@@ -71,8 +54,6 @@ case class RelayGame(
             else root.setClockAt(Clock(centis, true.some).some, path) | root
       copy(root = newRoot)
 
-  private def outcome = points.flatMap(Outcome.fromPoints)
-
   def showResult = Outcome.showPoints(points)
 
 private object RelayGame:
@@ -94,16 +75,17 @@ private object RelayGame:
   )
 
   def fromStudyImport(res: lila.study.StudyPgnImport.Result): RelayGame =
-    val fixedTags = Tags:
-      // remove wrong ongoing result tag if the board has a mate on it
-      if res.ending.isDefined && res.tags(_.Result).has("*") then
-        res.tags.value.filter(_ != Tag(_.Result, "*"))
-      // normalize result tag (e.g. 0.5-0 ->  1/2-0)
-      else
-        res.tags.value.map: tag =>
-          if tag.name == Tag.Result
-          then tag.copy(value = Outcome.showPoints(Outcome.pointsFromResult(tag.value)))
-          else tag
+    val fixedTags = removeBrokenPlayerNames:
+      Tags:
+        // remove wrong ongoing result tag if the board has a mate on it
+        if res.ending.isDefined && res.tags(_.Result).has("*") then
+          res.tags.value.filter(_ != Tag(_.Result, "*"))
+        // normalize result tag (e.g. 0.5-0 ->  1/2-0)
+        else
+          res.tags.value.map: tag =>
+            if tag.name == Tag.Result
+            then tag.copy(value = Outcome.showPoints(Outcome.pointsFromResult(tag.value)))
+            else tag
     RelayGame(
       tags = fixedTags,
       variant = res.variant,
@@ -113,6 +95,14 @@ private object RelayGame:
       ),
       points = res.ending.map(_.points)
     ).applyTagClocksToLastMoves
+
+  private def removeBrokenPlayerNames(tags: Tags) = tags.copy(
+    value = tags.value.filter: tag =>
+      (tag.name != Tag.White && tag.name != Tag.Black) || {
+        val n = tag.value.toLowerCase
+        n.size > 1 && n != "bye" && n != "unknown"
+      }
+  )
 
   import scalalib.Iso
   import chess.format.pgn.InitialComments
@@ -136,9 +126,10 @@ private object RelayGame:
       mul => RelayFetch.multiPgnToGames.either(mul).fold(e => throw e, identity)
     )
 
-  def filter(onlyRound: Option[Int])(games: RelayGames): RelayGames =
-    onlyRound.fold(games): round =>
-      games.filter(_.tags.roundNumber.has(round))
+  def filter(onlyRound: Option[Either[String, Int]])(games: RelayGames): RelayGames =
+    onlyRound.fold(games):
+      case Left(r)  => games.filter(_.tags(_.Round).has(r))
+      case Right(r) => games.filter(_.tags.roundNumber.has(r))
 
   // 1-indexed, both inclusive
   case class Slice(from: Int, to: Int)

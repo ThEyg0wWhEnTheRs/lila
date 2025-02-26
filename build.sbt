@@ -11,11 +11,11 @@ lazy val root = Project("lila", file("."))
   .dependsOn(api)
   .aggregate(api)
   .settings(buildSettings)
-  .settings(scalacOptions ++= Seq("-unchecked", "-deprecation"))
 
 organization         := "org.lichess"
 Compile / run / fork := true
 javaOptions ++= Seq("-Xms64m", "-Xmx512m", "-Dlogger.file=conf/logger.dev.xml")
+ThisBuild / scalacOptions ++= Seq("-unchecked", "-deprecation")
 ThisBuild / usePipelining := false
 // shorter prod classpath
 scriptClasspath             := Seq("*")
@@ -30,7 +30,6 @@ ivyLoggingLevel     := UpdateLogging.DownloadOnly
 Compile / mainClass := Some("lila.app.Lila")
 // Adds the Play application directory to the command line args passed to Play
 bashScriptExtraDefines += "addJava \"-Duser.dir=$(realpath \"$(cd \"${app_home}/..\"; pwd -P)\"  $(is_cygwin && echo \"fix\"))\"\n"
-Compile / RoutesKeys.generateReverseRouter := false
 Compile / RoutesKeys.routes / sources ++= {
   val dirs = (Compile / unmanagedResourceDirectories).value
   (dirs * "routes").get ++ (dirs * "*.routes").get
@@ -97,7 +96,7 @@ lazy val common = module("common",
   Seq(core),
   Seq(
     kamon.core, scaffeine, apacheText, chess.playJson
-  ) ++ tests.bundle ++ flexmark.bundle
+  ) ++ flexmark.bundle
 )
 
 lazy val db = module("db",
@@ -115,12 +114,11 @@ lazy val i18n = module("i18n",
   tests.bundle
 ).settings(
   Compile / resourceGenerators += Def.task {
-    val outputFile = (Compile / resourceManaged).value / "I18n.ser"
     I18n.serialize(
       sourceDir = new File("translation/source"),
       destDir = new File("translation/dest"),
       dbs = "site arena emails learn activity coordinates study class contact appeal patron coach broadcast streamer tfa settings preferences team perfStat search tourname faq lag swiss puzzle puzzleTheme challenge storm ublog insight keyboardMove timeago oauthScope dgt voiceCommands onboarding features".split(' ').toList,
-      outputFile
+      outputDir = (Compile / resourceManaged).value
     )
   }.taskValue
 )

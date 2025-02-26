@@ -12,6 +12,10 @@ final class CrosstableApi(
   import Crosstable.{ Matchup, Result }
   import Crosstable.BSONFields as F
 
+  lila.common.Bus.sub[lila.core.user.UserDelete]: del =>
+    matchupColl:
+      _.delete.one($doc("_id".$startsWith(s"${del.id}/"))).void
+
   def apply(game: Game): Fu[Option[Crosstable]] =
     game.twoUserIds.soFu(apply.tupled)
 
@@ -66,7 +70,7 @@ final class CrosstableApi(
           ),
           upsert = true
         )
-        val updateMatchup = matchupColl {
+        val updateMatchup = matchupColl:
           _.update
             .one(
               select(u1, u2),
@@ -79,7 +83,6 @@ final class CrosstableApi(
               upsert = true
             )
             .void
-        }
         updateCrosstable.zip(updateMatchup).void
       case _ => funit
 

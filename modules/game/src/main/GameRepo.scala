@@ -25,15 +25,15 @@ final class GameRepo(c: Coll)(using Executor) extends lila.core.game.GameRepo(c)
   def game(gameId: GameId): Fu[Option[Game]]              = coll.byId[Game](gameId)
   def gameFromSecondary(gameId: GameId): Fu[Option[Game]] = coll.secondaryPreferred.byId[Game](gameId)
 
-  def gamesFromSecondary(gameIds: Seq[GameId]): Fu[List[Game]] =
+  def gamesFromSecondary(gameIds: Seq[GameId]): Fu[List[Game]] = gameIds.nonEmpty.so:
     coll.byOrderedIds[Game, GameId](gameIds, readPref = _.sec)(_.id)
 
   // #TODO FIXME
   // https://github.com/ReactiveMongo/ReactiveMongo/issues/1185
-  def gamesTemporarilyFromPrimary(gameIds: Seq[GameId]): Fu[List[Game]] =
+  def gamesTemporarilyFromPrimary(gameIds: Seq[GameId]): Fu[List[Game]] = gameIds.nonEmpty.so:
     coll.byOrderedIds[Game, GameId](gameIds, readPref = _.priTemp)(_.id)
 
-  def gameOptionsFromSecondary(gameIds: Seq[GameId]): Fu[List[Option[Game]]] =
+  def gameOptionsFromSecondary(gameIds: Seq[GameId]): Fu[List[Option[Game]]] = gameIds.nonEmpty.so:
     coll.optionsByOrderedIds[Game, GameId](gameIds, none, _.priTemp)(_.id)
 
   val light: lila.core.game.GameLightRepo = new:
@@ -84,9 +84,10 @@ final class GameRepo(c: Coll)(using Executor) extends lila.core.game.GameRepo(c)
       user: U,
       readPref: ReadPref = _.priTemp
   ): Fu[List[Pov]] =
-    coll.byOrderedIds[Game, GameId](gameIds, readPref = readPref)(_.id).dmap {
-      _.flatMap(Pov(_, user))
-    }
+    coll
+      .byOrderedIds[Game, GameId](gameIds, readPref = readPref)(_.id)
+      .dmap:
+        _.flatMap(Pov(_, user))
 
   def recentPovsByUserFromSecondary(user: User, nb: Int, select: Bdoc = $empty): Fu[List[Pov]] =
     recentGamesFromSecondaryCursor(Query.user(user) ++ select)
@@ -98,6 +99,19 @@ final class GameRepo(c: Coll)(using Executor) extends lila.core.game.GameRepo(c)
       .find(select)
       .sort(Query.sortCreated)
       .cursor[Game](ReadPref.priTemp)
+
+  def ongoingByUserIdsCursor(userIds: Set[UserId]) =
+    coll
+      .aggregateWith[Game](readPreference = ReadPref.sec): framework =>
+        import framework.*
+        List(
+          Match($doc(lila.game.Game.BSONFields.playingUids -> $doc("$in" -> userIds, "$size" -> 2))),
+          AddFields:
+            $doc:
+              "both" -> $doc("$setIsSubset" -> $arr("$" + lila.core.game.BSONFields.playingUids, userIds))
+          ,
+          Match($doc("both" -> true))
+        )
 
   def gamesForAssessment(userId: UserId, nb: Int): Fu[List[Game]] =
     coll
@@ -141,9 +155,10 @@ final class GameRepo(c: Coll)(using Executor) extends lila.core.game.GameRepo(c)
 
   def docCursor(
       selector: Bdoc,
+      project: Option[Bdoc] = none,
       readPref: ReadPref = _.priTemp
   ): AkkaStreamCursor[Bdoc] =
-    coll.find(selector).cursor[Bdoc](readPref)
+    coll.find(selector, project).cursor[Bdoc](readPref)
 
   def sortedCursor(
       selector: Bdoc,
@@ -207,9 +222,10 @@ final class GameRepo(c: Coll)(using Executor) extends lila.core.game.GameRepo(c)
 
   // Use Env.round.proxy.urgentGames to get in-heap states!
   def urgentPovsUnsorted[U: UserIdOf](user: U): Fu[List[Pov]] =
-    coll.list[Game](Query.nowPlaying(user.id), lila.core.game.maxPlaying.value + 5).dmap {
-      _.flatMap { Pov(_, user) }
-    }
+    coll
+      .list[Game](Query.nowPlaying(user.id), lila.core.game.maxPlaying.value + 5)
+      .dmap:
+        _.flatMap { Pov(_, user) }
 
   def countWhereUserTurn(userId: UserId): Fu[Int] = coll
     .countSel(
@@ -315,11 +331,10 @@ final class GameRepo(c: Coll)(using Executor) extends lila.core.game.GameRepo(c)
           $doc(F.id -> game.id, holdAlertSelector),
           holdAlertProjection
         )
-        .map {
+        .map:
           _.fold(HoldAlert.emptyMap) { doc =>
             chess.ByColor(holdAlertOf(doc, _))
           }
-        }
 
     def povs(povs: Seq[Pov]): Fu[Map[GameId, HoldAlert]] =
       coll
@@ -399,11 +414,10 @@ final class GameRepo(c: Coll)(using Executor) extends lila.core.game.GameRepo(c)
       then g.copy(mode = chess.Mode.Casual)
       else g
     val userIds = g2.userIds.distinct
-    val fen: Option[Fen.Full] = initialFen.orElse {
+    val fen: Option[Fen.Full] = initialFen.orElse:
       (g2.variant.fromPosition || g2.variant.chess960)
         .option(Fen.write(g2.chess))
         .filterNot(_.isInitial)
-    }
     val checkInHours =
       if g2.isPgnImport then none
       else if g2.sourceIs(_.Api) then some(24 * 7)
@@ -416,9 +430,8 @@ final class GameRepo(c: Coll)(using Executor) extends lila.core.game.GameRepo(c)
     )
     coll.insert
       .one(bson)
-      .addFailureEffect {
+      .addFailureEffect:
         case wr: WriteResult if isDuplicateKey(wr) => lila.mon.game.idCollision.increment()
-      }
       .void
 
   def removeRecentChallengesOf(userId: UserId) =
@@ -540,10 +553,11 @@ final class GameRepo(c: Coll)(using Executor) extends lila.core.game.GameRepo(c)
       )
 
   def getSourceAndUserIds(id: GameId): Fu[(Option[Source], List[UserId])] =
-    coll.one[Bdoc]($id(id), $doc(F.playerUids -> true, F.source -> true)).dmap {
-      _.fold(none[Source] -> List.empty[UserId]): doc =>
-        (doc.int(F.source).flatMap(Source.apply), ~doc.getAsOpt[List[UserId]](F.playerUids))
-    }
+    coll
+      .one[Bdoc]($id(id), $doc(F.playerUids -> true, F.source -> true))
+      .dmap:
+        _.fold(none[Source] -> List.empty[UserId]): doc =>
+          (doc.int(F.source).flatMap(Source.apply), ~doc.getAsOpt[List[UserId]](F.playerUids))
 
   def recentAnalysableGamesByUserId(userId: UserId, nb: Int): Fu[List[Game]] =
     coll
@@ -556,3 +570,14 @@ final class GameRepo(c: Coll)(using Executor) extends lila.core.game.GameRepo(c)
       .sort(Query.sortCreated)
       .cursor[Game](ReadPref.sec)
       .list(nb)
+
+  def deleteAllSinglePlayerOf(id: UserId): Fu[List[GameId]] = for
+    aiIds     <- coll.primitive[GameId](Query.user(id) ++ Query.hasAi, "_id")
+    importIds <- coll.primitive[GameId](Query.imported(id), "_id")
+    allIds = aiIds ::: importIds
+    _ <- coll.delete.one($inIds(allIds))
+  yield allIds
+
+  // expensive, enumerates all the player's games
+  def swissIdsOf(id: UserId): Fu[Set[SwissId]] =
+    coll.distinctEasy[SwissId, Set](F.swissId, Query.user(id) ++ F.swissId.$exists(true))

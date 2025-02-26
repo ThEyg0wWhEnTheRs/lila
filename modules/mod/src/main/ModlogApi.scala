@@ -10,6 +10,7 @@ import lila.core.perm.Permission
 import lila.db.dsl.{ *, given }
 import lila.report.{ Mod, Report, Suspect }
 import lila.user.UserRepo
+import lila.core.chat.TimeoutReason
 
 final class ModlogApi(repo: ModlogRepo, userRepo: UserRepo, ircApi: IrcApi, presetsApi: ModPresetsApi)(using
     Executor
@@ -88,12 +89,14 @@ final class ModlogApi(repo: ModlogRepo, userRepo: UserRepo, ircApi: IrcApi, pres
   def teacherCloseAccount(user: UserId)(using me: Me) = add:
     Modlog(me, user.some, Modlog.teacherCloseAccount)
 
-  def selfCloseAccount(user: UserId, openReports: List[Report]) = add:
+  def selfCloseAccount(user: UserId, forever: Boolean, openReports: List[Report]) = add:
     Modlog(
       UserId.lichess.into(ModId),
       user.some,
       Modlog.selfCloseAccount,
-      details = openReports.map(r => s"${r.room.name} report").mkString(", ").some.filter(_.nonEmpty)
+      details = {
+        forever.so("forever ") + openReports.map(r => s"${r.room.name} report").mkString(", ")
+      }.some.filter(_.nonEmpty)
     )
 
   def closedByMod(user: User): Fu[Boolean] =
@@ -173,8 +176,8 @@ final class ModlogApi(repo: ModlogRepo, userRepo: UserRepo, ircApi: IrcApi, pres
   def terminateTournament(name: String)(using Me) = add:
     Modlog(none, Modlog.terminateTournament, details = name.some)
 
-  def chatTimeout(user: UserId, reason: String, text: String)(using MyId) = add:
-    Modlog(user.some, Modlog.chatTimeout, details = s"$reason: $text".some)
+  def chatTimeout(user: UserId, reason: TimeoutReason, text: String)(using MyId) = add:
+    Modlog(user.some, Modlog.chatTimeout, details = s"${reason.key}: $text".some)
 
   def setPermissions(user: UserId, permissions: Map[Permission, Boolean])(using Me) = add:
     Modlog(

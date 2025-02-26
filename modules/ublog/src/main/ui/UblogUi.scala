@@ -3,7 +3,7 @@ package ui
 
 import scalalib.paginator.Paginator
 
-import lila.core.i18n.Language
+import scalalib.model.Language
 import lila.ui.*
 
 import ScalatagsTemplate.{ *, given }
@@ -77,7 +77,7 @@ final class UblogUi(helpers: Helpers, atomUi: AtomUi)(picfitUrl: lila.core.misc.
       .css("bits.ublog")
       .js(posts.hasNextPage.option(infiniteScrollEsmInit) ++ ctx.isAuth.so(Esm("bits.ublog")))
       .copy(atomLinkTag = link(href := routes.Ublog.userAtom(user.username), st.title := title).some)
-      .robots(blog.listed):
+      .flag(_.noRobots, !blog.listed):
         main(cls := "page-menu")(
           menu(Left(user.id)),
           div(cls := "page-menu__content box box-pad ublog-index")(
@@ -275,13 +275,12 @@ final class UblogUi(helpers: Helpers, atomUi: AtomUi)(picfitUrl: lila.core.misc.
   def urlOfBlog(blogId: UblogBlog.Id): Call = blogId match
     case UblogBlog.Id.User(userId) => routes.Ublog.index(usernameOrId(userId))
 
-  private def tierForm(blog: UblogBlog) = postForm(action := routes.Ublog.setTier(blog.id.full)) {
+  private def tierForm(blog: UblogBlog) = postForm(action := routes.Ublog.setTier(blog.id.full)):
     val form = lila.ublog.UblogForm.tier.fill(blog.tier)
     frag(
       span(dataIcon := Icon.Agent, cls := "text")("Set to:"),
       form3.select(form("tier"), lila.ublog.UblogRank.Tier.options)
     )
-  }
 
   def menu(active: Either[UserId, String])(using ctx: Context) =
     def isRight(s: String) = active.fold(_ => false, _ == s)

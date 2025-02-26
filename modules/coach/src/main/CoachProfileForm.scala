@@ -2,11 +2,11 @@ package lila.coach
 
 import play.api.data.*
 import play.api.data.Forms.*
-import play.api.i18n.Lang
 import play.api.libs.json.{ JsSuccess, Json, Reads }
 
 import lila.common.Form.given
 import lila.core.data.RichText
+import scalalib.model.LangTag
 
 object CoachProfileForm:
 
@@ -55,8 +55,9 @@ object CoachProfileForm:
         available = Coach.Available(available),
         profile = profile,
         languages = Json.parse(languages).validate[List[TagifyLang]] match
-          case JsSuccess(langs, _) => langs.take(10).map(_.code).flatMap(Lang.get).map(_.code).distinct
-          case _                   => Nil
+          case JsSuccess(langs, _) =>
+            LangTag.from(langs.take(10).map(_.code)).flatMap(_.toLang).map(_.toTag).distinct
+          case _ => Nil
         ,
         updatedAt = nowInstant
       )

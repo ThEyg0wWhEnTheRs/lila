@@ -7,14 +7,12 @@ import scala.concurrent.ExecutionContext
 import lila.core.userId.UserId
 
 // has to be an object, not a package,
-// to makes sure opaque types don't leak out
+// so opaque types don't leak out
 object data:
 
   case class Strings(value: List[String]) extends AnyVal
   case class UserIds(value: List[UserId]) extends AnyVal
   case class Ints(value: List[Int])       extends AnyVal
-
-  case class Template(value: String) extends AnyVal
 
   trait OpaqueInstant[A](using A =:= Instant) extends TotalWrapper[A, Instant]
 
@@ -35,25 +33,7 @@ object data:
   opaque type SafeJsonStr = String
   object SafeJsonStr extends OpaqueString[SafeJsonStr]
 
-  case class Preload[A](value: Option[A]) extends AnyVal:
-    def orLoad(f: => Fu[A]): Fu[A] = value.fold(f)(Future.successful)
-  object Preload:
-    def apply[A](value: A): Preload[A] = Preload(value.some)
-    def none[A]                        = Preload[A](None)
+  opaque type Template = String
+  object Template extends OpaqueString[Template]
 
-  final class LazyFu[A](run: () => Fu[A]):
-    lazy val value: Fu[A]             = run()
-    def dmap[B](f: A => B): LazyFu[B] = LazyFu(() => value.map(f)(using ExecutionContext.parasitic))
-  object LazyFu:
-    def sync[A](v: => A): LazyFu[A] = LazyFu(() => Future.successful(v))
-
-  case class CircularDep[A](resolve: () => A)
-
-  final class SimpleMemo[A](ttl: Option[FiniteDuration])(compute: () => A):
-    private var value: A                     = compute()
-    private var recomputeAt: Option[Instant] = ttl.map(nowInstant.plus(_))
-    def get(): A =
-      if recomputeAt.exists(_.isBeforeNow) then
-        recomputeAt = ttl.map(nowInstant.plus(_))
-        value = compute()
-      value
+  final class CircularDep[A](val resolve: () => A)

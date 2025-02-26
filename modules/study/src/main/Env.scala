@@ -109,3 +109,11 @@ final class Env(
 
   lila.common.Bus.subscribeFun("studyAnalysisProgress"):
     case lila.tree.StudyAnalysisProgress(analysis, complete) => serverEvalMerger(analysis, complete)
+
+  lila.common.Bus.sub[lila.core.user.UserDelete]: del =>
+    for
+      studyIds <- studyRepo.deletePrivateByOwner(del.id)
+      _        <- chapterRepo.deleteByStudyIds(studyIds)
+      _        <- studyRepo.anonymizeAllOf(del.id)
+      _        <- topicApi.userTopicsDelete(del.id)
+    yield ()

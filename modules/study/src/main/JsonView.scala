@@ -7,6 +7,7 @@ import lila.common.Json.{ *, given }
 import lila.core.i18n.Translate
 import lila.core.socket.Sri
 import lila.tree.Node.Shape
+import lila.core.pref.Pref
 
 final class JsonView(
     studyRepo: StudyRepo,
@@ -21,7 +22,7 @@ final class JsonView(
       previews: Option[ChapterPreview.AsJsons],
       fedNames: Option[JsObject],
       withMembers: Boolean
-  )(using me: Option[Me]) =
+  )(using me: Option[Me], pref: Pref) =
 
     def allowed(selection: Settings => Settings.UserSelection): Boolean =
       Settings.UserSelection.allows(selection(study.settings), study, me.map(_.userId))
@@ -29,7 +30,7 @@ final class JsonView(
     for
       liked <- me.so(studyRepo.liked(study, _))
       relayPath = chapter.relay
-        .filter(_.secondsSinceLastMove < 3600 || chapter.tags.outcome.isEmpty)
+        .filter(_.secondsSinceLastMove.exists(_ < 3600) || chapter.tags.outcome.isEmpty)
         .map(_.path)
         .filterNot(_.isEmpty)
       jsStudy =
@@ -66,6 +67,7 @@ final class JsonView(
       .add("chapters", previews)
       .add("description", study.description)
       .add("federations", fedNames)
+      .add("showRatings", pref.showRatings)
 
   def chapterConfig(c: Chapter) =
     Json

@@ -6,8 +6,6 @@ import play.api.ConfigLoader
 
 import scala.quoted.*
 
-import lila.core.config.ConfigName
-
 // Copied from https://github.com/keynmol/autoconfig-lichess-play-derivation/blob/main/macros.scala
 // Thanks velvetbaldmime :)
 
@@ -28,6 +26,9 @@ given [A, B](using bts: SameRuntime[A, B], loader: ConfigLoader[A]): ConfigLoade
 def optionalConfig[A](using valueLoader: ConfigLoader[A]): ConfigLoader[Option[A]] = (config, path) =>
   if !config.hasPath(path) || config.getIsNull(path) then None
   else Some(valueLoader.load(config, path))
+
+final case class ConfigName(name: String) extends scala.annotation.StaticAnnotation:
+  assert(name != null && name.nonEmpty)
 
 object AutoConfig:
 
@@ -53,11 +54,10 @@ object AutoConfig:
 
             // see if the name needs to be overridden using ConfigName annotation
             val nameOverride = param.annotations
-              .collectFirst {
+              .collectFirst:
                 case a if a.tpe.derivesFrom(TypeRepr.of[ConfigName].typeSymbol) =>
                   val annot = a.asExprOf[ConfigName]
                   annot
-              }
               .map(ac => '{ $ac.name })
               .getOrElse(paramName)
 

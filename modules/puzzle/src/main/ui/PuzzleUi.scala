@@ -31,6 +31,7 @@ final class PuzzleUi(helpers: Helpers, val bits: PuzzleBits)(
       .css(ctx.pref.hasVoice.option("voice"))
       .css(ctx.blind.option("round.nvui"))
       .i18n(_.puzzle, _.puzzleTheme, _.storm)
+      .i18nOpt(ctx.blind, _.keyboardMove)
       .js(ctx.blind.option(Esm("puzzle.nvui")))
       .js(
         PageModule(
@@ -67,8 +68,8 @@ final class PuzzleUi(helpers: Helpers, val bits: PuzzleBits)(
         )
       )
       .hrefLangs(langPath)
-      .zoom
-      .zen:
+      .flag(_.zoom)
+      .flag(_.zen):
         bits.show.preload
 
   def themes(all: PuzzleAngle.All)(using ctx: Context) =

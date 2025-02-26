@@ -16,7 +16,8 @@ final class RoundUi(helpers: Helpers, gameUi: lila.game.ui.GameUi):
       .css(ctx.pref.hasKeyboardMove.option("keyboardMove"))
       .css(ctx.pref.hasVoice.option("voice"))
       .css(ctx.blind.option("round.nvui"))
-      .zoom
+      .i18nOpt(ctx.blind, _.keyboardMove)
+      .flag(_.zoom)
       .csp(_.withPeer.withWebAssembly)
 
   def povOpenGraph(pov: Pov) =
@@ -42,8 +43,8 @@ final class RoundUi(helpers: Helpers, gameUi: lila.game.ui.GameUi):
       ),
       div(cls := "now-playing"):
         val (myTurn, otherTurn) = playing.partition(_.isMyTurn)
-        (myTurn ++ otherTurn.take(6 - myTurn.size))
-          .take(9)
+        (myTurn ++ otherTurn.take(8 - myTurn.size))
+          .take(12)
           .map: pov =>
             a(href := routes.Round.player(pov.fullId), cls := pov.isMyTurn.option("my_turn"))(
               span(

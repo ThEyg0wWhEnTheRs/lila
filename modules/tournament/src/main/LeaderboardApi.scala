@@ -53,13 +53,14 @@ final class LeaderboardApi(
         ChartData:
           aggs
             .flatMap: agg =>
-              PerfType.byId.get(agg._id).map {
-                _ -> ChartData.PerfResult(
-                  nb = agg.nb,
-                  points = ChartData.Ints(agg.points),
-                  rank = ChartData.Ints(agg.ratios)
-                )
-              }
+              PerfType.byId
+                .get(agg._id)
+                .map:
+                  _ -> ChartData.PerfResult(
+                    nb = agg.nb,
+                    points = ChartData.Ints(agg.points),
+                    rank = ChartData.Ints(agg.ratios)
+                  )
             .sortLike(lila.rating.PerfType.leaderboardable, _._1)
 
   def getAndDeleteRecent(userId: UserId, since: Instant): Fu[List[TourId]] = for
@@ -69,19 +70,19 @@ final class LeaderboardApi(
   yield entries.map(_.tourId)
 
   def byPlayerStream(
-      user: User,
+      userId: UserId,
       withPerformance: Boolean,
       perSecond: MaxPerSecond,
       nb: Int
   ): Source[TourEntry, ?] =
     repo.coll
       .aggregateWith[Bdoc](): fw =>
-        aggregateByPlayer(user, fw, fw.Descending("d"), withPerformance, nb, offset = 0).toList
+        aggregateByPlayer(userId, fw, fw.Descending("d"), withPerformance, nb, offset = 0).toList
       .documentSource()
       .mapConcat(readTourEntry)
 
   private def aggregateByPlayer(
-      user: User,
+      userId: UserId,
       framework: repo.coll.AggregationFramework.type,
       sort: framework.SortOrder,
       withPerformance: Boolean,
@@ -91,7 +92,7 @@ final class LeaderboardApi(
     import framework.*
     NonEmptyList
       .of(
-        Match($doc("u" -> user.id)),
+        Match($doc("u" -> userId)),
         Sort(sort),
         Skip(offset),
         Limit(nb),
@@ -130,9 +131,8 @@ final class LeaderboardApi(
         def slice(offset: Int, length: Int): Fu[Seq[TourEntry]] =
           repo.coll
             .aggregateList(length, _.sec): framework =>
-              import framework.*
               val sort = if sortBest then framework.Ascending("w") else framework.Descending("d")
-              val pipe = aggregateByPlayer(user, framework, sort, false, length, offset)
+              val pipe = aggregateByPlayer(user.id, framework, sort, false, length, offset)
               pipe.head -> pipe.tail
             .map(_.flatMap(readTourEntry))
     )
@@ -160,7 +160,6 @@ object LeaderboardApi:
       rank: Rank,
       rankRatio: Ratio, // ratio * rankRatioMultiplier. function of rank and tour.nbPlayers. less is better.
       freq: Option[Schedule.Freq],
-      speed: Option[Schedule.Speed],
       perf: PerfType,
       date: Instant
   ) extends lila.core.tournament.leaderboard.Entry

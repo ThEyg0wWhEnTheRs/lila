@@ -2,11 +2,13 @@ package lila.lobby
 
 import play.api.libs.json.*
 import scalalib.actor.SyncActor
+import scalalib.Maths.boxedNormalDistribution
 import chess.IntRating
 
 import lila.common.Json.given
 import lila.core.game.ChangeFeatured
 import lila.core.pool.PoolConfigId
+import lila.core.security.{ UserTrust, UserTrustApi }
 import lila.core.socket.{ protocol as P, * }
 import lila.core.timeline.*
 import lila.rating.{ Glicko, RatingRange }
@@ -20,7 +22,8 @@ final class LobbySocket(
     socketKit: SocketKit,
     lobby: LobbySyncActor,
     relationApi: lila.core.relation.RelationApi,
-    poolApi: lila.core.pool.PoolApi
+    poolApi: lila.core.pool.PoolApi,
+    userTrustApi: UserTrustApi
 )(using ec: Executor, scheduler: Scheduler)(using lila.core.config.RateLimit):
 
   import LobbySocket.*
@@ -157,33 +160,31 @@ final class LobbySocket(
         member,
         cost = if member.isAuth then 4 else 5,
         msg = s"join $o ${member.userId | "anon"}"
-      ) {
+      ):
         o.str("d").foreach { id =>
           lobby ! BiteHook(id, member.sri, member.user)
         }
-      }
     case ("cancel", _) =>
-      HookPoolLimit(member, cost = 1, msg = "cancel") {
+      HookPoolLimit(member, cost = 1, msg = "cancel"):
         lobby ! CancelHook(member.sri)
-      }
     case ("joinSeek", o) if !member.bot =>
-      HookPoolLimit(member, cost = 5, msg = s"joinSeek $o") {
+      HookPoolLimit(member, cost = 5, msg = s"joinSeek $o"):
         for
           id   <- o.str("d")
           user <- member.user
         do lobby ! BiteSeek(id, user)
-      }
     case ("cancelSeek", o) =>
-      HookPoolLimit(member, cost = 1, msg = s"cancelSeek $o") {
+      HookPoolLimit(member, cost = 1, msg = s"cancelSeek $o"):
         for
           id   <- o.str("d")
           user <- member.user
         do lobby ! CancelSeek(id, user)
-      }
     case ("idle", o) => actor ! SetIdle(member.sri, ~(o.boolean("d")))
     // entering a pool
-    case ("poolIn", o) if !member.bot =>
-      HookPoolLimit(member, cost = 1, msg = s"poolIn $o") {
+    case ("poolIn", o) if member.bot =>
+      logger.warn(s"Bot ${member.user.so(_.username.value)} can't enter a pool")
+    case ("poolIn", o) =>
+      HookPoolLimit(member, cost = 1, msg = s"poolIn $o"):
         for
           user     <- member.user
           d        <- o.obj("d")
@@ -193,23 +194,22 @@ final class LobbySocket(
           blocking    = d.get[UserId]("blocking")
         yield
           lobby ! CancelHook(member.sri) // in case there's one...
-          userApi.glicko(user.id, perfType).foreach { glicko =>
-            val pairingGlicko = glicko | Glicko.pairingDefault
+          for
+            glicko <- userApi.glicko(user.id, perfType)
+            trust <-
+              if glicko.exists(_.established) then fuccess(UserTrust.Yes) else userTrustApi.get(user.id)
+          do
             poolApi.join(
               PoolConfigId(id),
               lila.core.pool.Joiner(
                 sri = member.sri,
-                rating = pairingGlicko.establishedIntRating | IntRating(
-                  scalalib.Maths
-                    .boxedNormalDistribution(pairingGlicko.intRating.value, pairingGlicko.intDeviation, 0.3)
-                ),
+                rating = toJoinRating(user, glicko, trust),
+                provisional = glicko.forall(_.provisional.yes),
                 ratingRange = ratingRange,
                 lame = user.lame,
                 blocking = user.blocking.map(_ ++ blocking)
               )(using user.id.into(MyId))
             )
-          }
-      }
     // leaving a pool
     case ("poolOut", o) =>
       HookPoolLimit(member, cost = 1, msg = s"poolOut $o"):
@@ -225,38 +225,35 @@ final class LobbySocket(
     case ("hookOut", _) => actor ! HookSub(member, value = false)
 
   private def getOrConnect(sri: Sri, userOpt: Option[UserId]): Fu[Member] =
-    actor.ask[Option[Member]](GetMember(sri, _)).getOrElse {
-      userOpt.so(userApi.withPerfs).flatMap { user =>
-        user
-          .filter(_.enabled.yes)
-          .so: u =>
-            socketKit.baseHandler(P.In.ConnectUser(u.id))
-            relationApi.fetchBlocking(u.id)
-          .map: blocks =>
-            val member = Member(sri, user.map { LobbyUser.make(_, lila.core.pool.Blocking(blocks)) })
-            actor ! Join(member)
-            member
-      }
-    }
+    actor
+      .ask[Option[Member]](GetMember(sri, _))
+      .getOrElse:
+        userOpt.so(userApi.withPerfs).flatMap { user =>
+          user
+            .filter(_.enabled.yes)
+            .so: u =>
+              socketKit.baseHandler(P.In.ConnectUser(u.id))
+              relationApi.fetchBlocking(u.id)
+            .map: blocks =>
+              val member = Member(sri, user.map { LobbyUser.make(_, lila.core.pool.Blocking(blocks)) })
+              actor ! Join(member)
+              member
+        }
 
   private val handler: SocketHandler =
 
-    case P.In.ConnectSris(cons) =>
-      cons.foreach { case (sri, userId) =>
-        getOrConnect(sri, userId)
-      }
+    case P.In.ConnectSris(cons) => cons.foreach(getOrConnect)
 
     case P.In.DisconnectSris(sris) => actor ! LeaveBatch(sris)
 
     case P.In.TellSri(sri, user, tpe, msg) if messagesHandled(tpe) =>
-      getOrConnect(sri, user).foreach { member =>
+      getOrConnect(sri, user).foreach: member =>
         controller(member).applyOrElse(
           tpe -> msg,
           { case _ =>
             logger.warn(s"Can't handle $tpe")
           }: SocketController
         )
-      }
 
     case In.Counters(m, r) => lastCounters = LobbyCounters(m, r)
 
@@ -280,6 +277,13 @@ private object LobbySocket:
     def bot    = user.exists(_.bot)
     def userId = user.map(_.id)
     def isAuth = userId.isDefined
+
+  def toJoinRating(user: LobbyUser, g: Option[chess.rating.glicko.Glicko], trust: UserTrust) =
+    val glicko = g | Glicko.pairingDefault
+    glicko.establishedIntRating | IntRating:
+      if trust.yes
+      then boxedNormalDistribution(glicko.intRating.value, glicko.intDeviation, 0.3)
+      else boxedNormalDistribution(glicko.intRating.value - 100, glicko.intDeviation / 2, 0.3)
 
   object Protocol:
     object In:

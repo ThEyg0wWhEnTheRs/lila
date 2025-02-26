@@ -3,7 +3,6 @@ package lila.core.lilaism
 import alleycats.Zero
 import com.typesafe.config.Config
 import scalalib.future.FutureAfter
-import java.util.Base64
 import java.util.concurrent.TimeUnit
 import scala.collection.BuildFrom
 import scala.concurrent.{ ExecutionContext as EC, Future }
@@ -38,6 +37,7 @@ trait LilaLibraryExtensions extends CoreExports:
     def err(message: => String): A = self.getOrElse(sys.error(message))
 
   extension (self: Boolean)
+    def not: Boolean = !self
     // move to scalalib? generalize Future away?
     def soFu[B](f: => Future[B]): Future[Option[B]] =
       if self then f.map(Some(_))(scala.concurrent.ExecutionContext.parasitic)
@@ -102,8 +102,6 @@ trait LilaLibraryExtensions extends CoreExports:
     def parallelVoid(using Executor): Fu[Unit] =
       list.iterator
         .foldLeft(fuccess(()))((fr, fa) => fr.zipWith(fa)((_, _) => ()))
-
-  extension (self: Array[Byte]) def toBase64 = Base64.getEncoder.encodeToString(self)
 
   extension [A](fua: Fu[A])
 

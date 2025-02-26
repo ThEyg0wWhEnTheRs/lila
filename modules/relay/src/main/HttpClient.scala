@@ -30,7 +30,7 @@ private final class HttpClient(
       .match
         case None =>
           fetchBodyAndEtag(url, none)
-        case Some((prevBody, prevEtag)) =>
+        case Some(prevBody, prevEtag) =>
           fetchBodyAndEtag(url, prevEtag.some).map: (newBody, newEtag) =>
             val body = if newBody.isEmpty && newEtag.has(prevEtag) then prevBody.some else newBody
             (body, newEtag)
@@ -42,11 +42,28 @@ private final class HttpClient(
       CanProxy
   ): Fu[(Option[Body], Option[Etag])] =
     val req = etag.foldLeft(toRequest(url))((req, etag) => req.addHttpHeaders("If-None-Match" -> etag))
-    fetchResponse(req).map: res =>
-      val newEtag = res.header("Etag")
-      if res.status == 304
-      then none                         -> newEtag.orElse(etag)
-      else decodeResponseBody(res).some -> newEtag
+    fetchResponse(req)
+      .map: res =>
+        val newEtag = extractEtagValue(res)
+        if res.status == 304
+        then none                         -> newEtag.orElse(etag)
+        else decodeResponseBody(res).some -> newEtag
+      .recoverWith:
+        case Status(400, _) if etag.isDefined =>
+          val prevEtag = etag.get // terrible, I wish it could be extracted from the match above
+          fetchBodyAndEtag(url, none)
+            .addEffects: res =>
+              val success = if res.isSuccess then "succeeded" else "failed"
+              logger.info(s"Retrying $url without etag $prevEtag -> $success")
+            .map: (body, etag) =>
+              (body, etag.filter(_ != prevEtag))
+
+  // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag#w
+  private def extractEtagValue(res: StandaloneWSResponse): Option[Etag] =
+    res
+      .header("Etag")
+      .map: etag =>
+        if etag.startsWith("W/\"") then etag.drop(3).dropRight(1) else etag
 
   private def fetchResponse(req: StandaloneWSRequest): Fu[StandaloneWSResponse] =
     Future

@@ -5,7 +5,7 @@
   <string name="whatCanWeHelpYouWith">¿En qué podemos ayudarte?</string>
   <string name="visitThisPage">Visita esta página para resolver el problema</string>
   <string name="iCantLogIn">No puedo iniciar sesión</string>
-  <string name="noConfirmationEmail" comment="This string used to be &quot;I don't&quot; - it should be &quot;I didn't&quot;. Please re-translate as necessary.">No recibo mi correo de confirmación</string>
+  <string name="noConfirmationEmail">No recibo mi correo de confirmación</string>
   <string name="forgotPassword">Olvidé mi contraseña</string>
   <string name="forgotUsername">Olvidé mi nombre de usuario</string>
   <string name="youCanLoginWithEmail">Puedes iniciar sesión con la dirección de correo electrónico con la que te registraste</string>
@@ -48,7 +48,7 @@
   <string name="tryCastling">Prueba este pequeño tutorial interactivo para practicar el enroque en el ajedrez</string>
   <string name="castlingImported">Si has importado una partida o una posición inicial, asegúrate de establecer correctamente los derechos del enroque.</string>
   <string name="insufficientMaterial">Material insuficiente para dar mate</string>
-  <string name="fideMate">Según las reglas FIDE §6.9, si un jaque mate es posible con cualquier secuencia legal de movimientos, entonces el juego no es un empate</string>
+  <string name="fideMate">Según las reglas FIDE §6.9, si un jaque mate es posible con cualquier secuencia legal de movimientos, entonces la partida no es tablas</string>
   <string name="knightMate">Puedes hacer jaque mate con sólo un caballo o un alfil, si el oponente tiene más que un rey en el tablero.</string>
   <string name="noRatingPoints">No se otorgaron puntos</string>
   <string name="ratedGame">Asegúrate de haber jugado una partida por puntuación. Las partidas amistosas no afectan a las puntuaciones de los jugadores.</string>

@@ -1,7 +1,9 @@
 package lila.cms
-import reactivemongo.api.bson.*
 
-import lila.core.i18n.{ LangList, LangPicker, Language, defaultLanguage }
+import reactivemongo.api.bson.*
+import scalalib.model.Language
+
+import lila.core.i18n.{ LangList, LangPicker, defaultLanguage }
 import lila.core.id.{ CmsPageId, CmsPageKey }
 import lila.db.dsl.{ *, given }
 import lila.ui.Context
@@ -50,5 +52,5 @@ final class CmsApi(coll: Coll, markup: CmsMarkup, langList: LangList, langPicker
     coll
       .list[CmsPage]($doc("key" -> key, "language".$in(prefered)))
       .map: pages =>
-        prefered.foldLeft(none[CmsPage]): (found, language) =>
-          found.orElse(pages.find(_.language == language))
+        prefered.collectFirstSome: language =>
+          pages.find(_.language == language)

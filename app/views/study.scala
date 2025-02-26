@@ -51,6 +51,7 @@ def show(
     .css("analyse.study")
     .css(ctx.pref.hasKeyboardMove.option("keyboardMove"))
     .i18n(_.puzzle, _.study)
+    .i18nOpt(ctx.blind, _.keyboardMove)
     .js(analyseNvuiTag)
     .js(
       PageModule(
@@ -79,8 +80,8 @@ def show(
         ) ++ views.board.explorerAndCevalConfig
       )
     )
-    .robots(s.isPublic)
-    .zoom
+    .flag(_.noRobots, !s.isPublic)
+    .flag(_.zoom)
     .csp(views.analyse.ui.csp.compose(_.withPeer.withExternalAnalysisApis))
     .graph(
       title = s.name.value,
@@ -110,19 +111,19 @@ def privateStudy(study: lila.study.Study)(using Context) =
 
 object embed:
 
-  def apply(s: lila.study.Study, chapter: lila.study.Chapter, pgn: PgnStr)(using ctx: EmbedContext) =
-    val canGetPgn = s.settings.shareable == lila.study.Settings.UserSelection.Everyone
+  def apply(s: lila.study.Study, chapterId: StudyChapterId, pgn: PgnStr)(using ctx: EmbedContext) =
+    val canGetPgn  = s.settings.shareable == lila.study.Settings.UserSelection.Everyone
+    val isGamebook = pgn.value.contains("""[ChapterMode "gamebook"]""")
     views.base.embed.minimal(
-      title = s"${s.name} ${chapter.name}",
+      title = s.name.value,
       cssKeys = List("bits.lpv.embed"),
       modules = Esm("site.lpvEmbed")
     )(
       div(cls := "is2d")(div(pgn)),
       views.analyse.ui.embed.lpvJs(
         views.analyse.ui.embed.lpvConfig(orientation = none, getPgn = canGetPgn) ++
-          chapter.isGamebook.so:
-            Json.obj:
-              "gamebook" -> Json.obj("url" -> routes.Study.chapter(s.id, chapter.id).url)
+          isGamebook.so:
+            Json.obj("gamebook" -> Json.obj("url" -> routes.Study.chapter(s.id, chapterId).url))
       )(ctx.nonce.some)
     )
 

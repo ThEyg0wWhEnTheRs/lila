@@ -1,6 +1,6 @@
 import { parseFen } from 'chessops/fen';
 import { defined, prop, type Prop, toggle } from 'common';
-import { snabDialog, alert } from 'common/dialog';
+import { type Dialog, snabDialog, alert } from 'common/dialog';
 import * as licon from 'common/licon';
 import { bind, bindSubmit, onInsert, looseH as h, dataIcon, type VNode } from 'common/snabbdom';
 import { storedProp } from 'common/storage';
@@ -27,9 +27,12 @@ export const fieldValue = (e: Event, id: string) =>
   ((e.target as HTMLElement).querySelector('#chapter-' + id) as HTMLInputElement)?.value;
 
 export class StudyChapterNewForm {
-  readonly multiPgnMax = 32;
+  readonly multiPgnMax = 64;
   variants: Variant[] = [];
-  isOpen = toggle(false);
+  dialog: Dialog | undefined;
+  isOpen = toggle(false, val => {
+    if (!val) this.dialog?.close();
+  });
   initial = toggle(false);
   tab = storedProp<ChapterTab>(
     'analyse.study.form.tab',
@@ -142,11 +145,16 @@ export function view(ctrl: StudyChapterNewForm): VNode {
   return snabDialog({
     class: 'chapter-new',
     onClose() {
+      ctrl.dialog = undefined;
       ctrl.isOpen(false);
       ctrl.redraw();
     },
     modal: true,
     noClickAway: true,
+    onInsert: dlg => {
+      ctrl.dialog = dlg;
+      dlg.show();
+    },
     vnodes: [
       activeTab !== 'edit' &&
         h('h2', [
@@ -210,6 +218,7 @@ export function view(ctrl: StudyChapterNewForm): VNode {
                         orientation: ctrl.orientation,
                         onChange: ctrl.editorFen,
                         coordinates: true,
+                        bindHotkeys: false,
                       };
                       ctrl.editor = await site.asset.loadEsm<LichessEditor>('editor', { init: data });
                       ctrl.editorFen(ctrl.editor.getFen());

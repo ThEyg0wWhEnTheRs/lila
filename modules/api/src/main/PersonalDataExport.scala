@@ -14,7 +14,7 @@ final class PersonalDataExport(
     msgEnv: lila.msg.Env,
     forumEnv: lila.forum.Env,
     gameEnv: lila.game.Env,
-    roundEnv: lila.round.Env,
+    noteApi: lila.round.NoteApi,
     chatEnv: lila.chat.Env,
     relationEnv: lila.relation.Env,
     userRepo: lila.user.UserRepo,
@@ -64,7 +64,7 @@ final class PersonalDataExport(
     val streamer = Source.futureSource:
       streamerApi
         .find(user)
-        .map {
+        .map:
           _.map(_.streamer).so: s =>
             List(textTitle("Streamer profile")) :::
               List(
@@ -80,13 +80,12 @@ final class PersonalDataExport(
                 "liveAt"      -> s.liveAt.so(textDate)
               ).map: (k, v) =>
                 s"$k: $v"
-        }
         .map(Source.apply)
 
     val coach = Source.futureSource:
       coachApi
         .find(user)
-        .map {
+        .map:
           _.map(_.coach).so: c =>
             List(textTitle("Coach profile")) :::
               c.profile.textLines :::
@@ -97,7 +96,6 @@ final class PersonalDataExport(
                 "updatedAt" -> textDate(c.updatedAt)
               ).map: (k, v) =>
                 s"$k: $v"
-        }
         .map(Source.apply)
 
     val forumPosts =
@@ -155,7 +153,7 @@ final class PersonalDataExport(
               Project($id(true)),
               PipelineOperator(
                 $lookup.pipelineFull(
-                  from = roundEnv.noteApi.collName,
+                  from = noteApi.collName,
                   as = "note",
                   let = $doc("id" -> $doc("$concat" -> $arr("$_id", user.id))),
                   pipe = List($doc("$match" -> $expr($doc("$eq" -> $arr("$_id", "$$id")))))
@@ -166,7 +164,7 @@ final class PersonalDataExport(
               Project($doc("_id" -> false, "t" -> true))
             )
           .documentSource()
-          .map { ~_.string("t") }
+          .map(~_.string("t"))
           .throttle(heavyPerSecond, 1.second)
       )
 

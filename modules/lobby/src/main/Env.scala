@@ -17,6 +17,7 @@ final class Env(
     newPlayer: lila.core.game.NewPlayer,
     poolApi: lila.core.pool.PoolApi,
     cacheApi: lila.memo.CacheApi,
+    userTrustApi: lila.core.security.UserTrustApi,
     socketKit: lila.core.socket.SocketKit
 )(using
     Executor,
@@ -45,7 +46,7 @@ final class Env(
     wire[LobbySyncActor]
 
   // eager initialization for Bus subscription
-  private val abortListener = wire[AbortListener]
+  wire[AbortListener]
 
   private lazy val biter = wire[Biter]
 

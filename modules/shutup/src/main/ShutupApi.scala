@@ -17,9 +17,12 @@ final class ShutupApi(
   private given BSONDocumentHandler[UserRecord] = Macros.handler
   import PublicLine.given
 
+  lila.common.Bus.sub[lila.core.user.UserDelete]: del =>
+    coll.delete.one($id(del.id))
+
   def getPublicLines(userId: UserId): Fu[List[PublicLine]] =
     coll
-      .find($doc("_id" -> userId), $doc("pub" -> 1).some)
+      .find($id(userId), $doc("pub" -> 1).some)
       .one[Bdoc]
       .map:
         ~_.flatMap(_.getAsOpt[List[PublicLine]]("pub"))
@@ -29,11 +32,12 @@ final class ShutupApi(
     record(userId, text, TextType.of(source), source.some)
 
   def privateChat(chatId: String, userId: UserId, text: String) =
-    gameRepo.getSourceAndUserIds(GameId(chatId)).flatMap {
-      case (source, _) if source.has(lila.core.game.Source.Friend) => funit // ignore challenges
-      case (_, userIds) =>
-        record(userId, text, TextType.PrivateChat, none, userIds.find(userId !=))
-    }
+    gameRepo
+      .getSourceAndUserIds(GameId(chatId))
+      .flatMap:
+        case (source, _) if source.has(lila.core.game.Source.Friend) => funit // ignore challenges
+        case (_, userIds) =>
+          record(userId, text, TextType.PrivateChat, none, userIds.find(userId !=))
 
   def privateMessage(userId: UserId, toUserId: UserId, text: String) =
     record(userId, text, TextType.PrivateMessage, none, toUserId.some)
@@ -81,8 +85,8 @@ final class ShutupApi(
             yield ()
 
   private def legiferate(userRecord: UserRecord, analysed: TextAnalysis): Funit =
-    (analysed.critical || userRecord.reports.exists(_.unacceptable)).so {
-      val text = (analysed.critical.so("Critical comm alert\n")) ++ {
+    (analysed.critical || userRecord.reports.exists(_.unacceptable)).so:
+      val text = analysed.critical.so("Critical comm alert\n") ++ {
         val repText = reportText(userRecord)
         if repText.isEmpty then analysed.badWords.mkString(", ") else repText
       }
@@ -93,12 +97,10 @@ final class ShutupApi(
           $unset(TextType.values.map(_.key))
         )
       yield ()
-    }
 
   private def reportText(userRecord: UserRecord) =
     userRecord.reports
-      .collect {
+      .collect:
         case r if r.unacceptable =>
           s"${r.textType.name}: ${r.nbBad} dubious (out of ${r.ratios.size})"
-      }
       .mkString("\n")

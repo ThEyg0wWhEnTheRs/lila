@@ -1,7 +1,7 @@
 import { onInsert, looseH as h, type VNode, type Attrs, type LooseVNodes } from './snabbdom';
 import { isTouchDevice } from './device';
 import { escapeHtml, frag, $as } from './common';
-import { eventJanitor } from './event';
+import { Janitor } from './event';
 import * as xhr from './xhr';
 import * as licon from './licon';
 import { pubsub } from './pubsub';
@@ -56,7 +56,7 @@ export type Action =
   | { selector?: string; event?: string | string[]; listener: ActionListener }
   | { selector?: string; event?: string | string[]; result: string };
 
-// Safari versions before 15.4 need a polyfill for dialog. this "ready" promise resolves when that's loaded
+// Safari versions before 15.4 need a polyfill for dialog
 site.load.then(async () => {
   window.addEventListener('resize', onResize);
   if (!window.HTMLDialogElement)
@@ -222,8 +222,8 @@ export function snabDialog(o: SnabDialogOpts): VNode {
 
 class DialogWrapper implements Dialog {
   private resolve?: (dialog: Dialog) => void;
-  private actionEvents = eventJanitor();
-  private dialogEvents = eventJanitor();
+  private actionEvents = new Janitor();
+  private dialogEvents = new Janitor();
   private observer: MutationObserver = new MutationObserver(list => {
     for (const m of list)
       if (m.type === 'childList')
@@ -245,7 +245,7 @@ class DialogWrapper implements Dialog {
 
     const justThen = Date.now();
     const cancelOnInterval = (e: PointerEvent) => {
-      if (Date.now() - justThen < 200) return;
+      if (Date.now() - justThen < 200) return; // removed isConnected() check. we catch leaks this way
       const r = dialog.getBoundingClientRect();
       if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom)
         this.close('cancel');
@@ -254,7 +254,10 @@ class DialogWrapper implements Dialog {
     view.parentElement?.style.setProperty('---viewport-height', `${window.innerHeight}px`);
     this.dialogEvents.addListener(view, 'click', e => e.stopPropagation());
 
-    this.dialogEvents.addListener(dialog, 'cancel', () => !this.returnValue && (this.returnValue = 'cancel'));
+    this.dialogEvents.addListener(dialog, 'cancel', e => {
+      if (o.noClickAway && o.noCloseButton && o.class !== 'alert') return e.preventDefault();
+      if (!this.returnValue) this.returnValue = 'cancel';
+    });
     this.dialogEvents.addListener(dialog, 'close', this.onRemove);
     if (!o.noCloseButton)
       this.dialogEvents.addListener(
@@ -276,7 +279,7 @@ class DialogWrapper implements Dialog {
       else where.appendChild(app.node);
     }
     this.updateActions();
-    this.dialogEvents.addListener(this.dialog, 'keydown', onKeydown);
+    this.dialogEvents.addListener(this.dialog, 'keydown', this.onKeydown);
   }
 
   get open(): boolean {
@@ -309,7 +312,7 @@ class DialogWrapper implements Dialog {
 
   // attach/reattach existing listeners or provide a set of new ones
   updateActions = (actions = this.o.actions) => {
-    this.actionEvents.removeAll();
+    this.actionEvents.cleanup();
     if (!actions) return;
     for (const a of Array.isArray(actions) ? actions : [actions]) {
       for (const event of Array.isArray(a.event) ? a.event : a.event ? [a.event] : ['click']) {
@@ -320,6 +323,23 @@ class DialogWrapper implements Dialog {
         }
       }
     }
+  };
+
+  private onKeydown = (e: KeyboardEvent) => {
+    if (e.key === 'Escape' && !(this.o.noCloseButton && this.o.noClickAway)) {
+      this.close('cancel');
+      e.preventDefault();
+    } else if (e.key === 'Tab') {
+      const $focii = $(focusQuery, e.currentTarget as Element),
+        first = $as<HTMLElement>($focii.first()),
+        last = $as<HTMLElement>($focii.last()),
+        focus = document.activeElement as HTMLElement;
+      if (focus === last && !e.shiftKey) first.focus();
+      else if (focus === first && e.shiftKey) last.focus();
+      else return;
+      e.preventDefault();
+    }
+    e.stopPropagation();
   };
 
   private autoFocus() {
@@ -343,8 +363,8 @@ class DialogWrapper implements Dialog {
       if ('hashed' in css) site.asset.removeCssPath(css.hashed);
       else if ('url' in css) site.asset.removeCss(css.url);
     }
-    this.actionEvents.removeAll();
-    this.dialogEvents.removeAll();
+    this.actionEvents.cleanup();
+    this.dialogEvents.cleanup();
   };
 }
 
@@ -363,20 +383,6 @@ function loadAssets(o: DialogOpts) {
 
 function escapeHtmlAddBreaks(s: string) {
   return escapeHtml(s).replace(/\n/g, '<br>');
-}
-
-function onKeydown(e: KeyboardEvent) {
-  if (e.key === 'Tab') {
-    const $focii = $(focusQuery, e.currentTarget as Element),
-      first = $as<HTMLElement>($focii.first()),
-      last = $as<HTMLElement>($focii.last()),
-      focus = document.activeElement as HTMLElement;
-    if (focus === last && !e.shiftKey) first.focus();
-    else if (focus === first && e.shiftKey) last.focus();
-    else return;
-    e.preventDefault();
-  }
-  e.stopPropagation();
 }
 
 function onResize() {

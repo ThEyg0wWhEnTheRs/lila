@@ -44,7 +44,7 @@ final class Main(
 
   private def serveMobile(using Context) =
     pageHit
-    FoundPage(env.cms.renderKey("mobile-apk"))(views.mobile)
+    FoundPage(env.cms.renderKey("mobile"))(views.mobile)
 
   def dailyPuzzleSlackApp = Open:
     Ok.page(views.site.ui.dailyPuzzleSlackApp)
@@ -98,7 +98,7 @@ final class Main(
     path match
       case "keyboard-move" => Ok.snip(lila.web.ui.help.keyboardMove)
       case "voice/move"    => Ok.snip(lila.web.ui.help.voiceMove)
-      case "master"        => Redirect("/verify-title")
+      case "master"        => Redirect(routes.TitleVerify.index.url)
       case _               => notFound
 
   def movedPermanently(to: String) = Anon:
@@ -144,5 +144,7 @@ final class Main(
           env.memo.picfitApi.bodyImage
             .upload(rel, image)
             .map(url => JsonOk(Json.obj("imageUrl" -> url)))
+            .recover:
+              case e: Exception => JsonBadRequest(jsonError(e.getMessage))
       case None => JsonBadRequest(jsonError("Image content only"))
   }

@@ -42,9 +42,10 @@ final class StreamerApi(
     users <- userApi.byIds(live.streams.map(_.streamer.userId))
     subs  <- me.so(subsRepo.filterSubscribed(_, users.map(_.id)))
   yield live.streams.flatMap: s =>
-    users.find(_.is(s.streamer)).map {
-      Streamer.WithUserAndStream(s.streamer, _, s.some, subs(s.streamer.userId))
-    }
+    users
+      .find(_.is(s.streamer))
+      .map:
+        Streamer.WithUserAndStream(s.streamer, _, s.some, subs(s.streamer.userId))
 
   def allListedIds: Fu[Set[Streamer.Id]] = cache.listedIds.getUnit
 
@@ -80,8 +81,7 @@ final class StreamerApi(
       .map: _ =>
         asMod.option:
           cache.listedIds.invalidateUnit()
-          streamer.youTube
-            .foreach(tuber => ytApi.channelSubscribe(tuber.channelId, true))
+          streamer.youTube.foreach(tuber => ytApi.channelSubscribe(tuber.channelId, true))
           modChange(prev, streamer)
 
   def forceCheck(uid: UserId): Funit =
@@ -140,9 +140,9 @@ final class StreamerApi(
     coll
       .find($id(user.id))
       .one[Streamer]
-      .map(_.foreach: s =>
+      .flatMapz: s =>
         s.youTube.foreach(tuber => ytApi.channelSubscribe(tuber.channelId, false))
-        coll.delete.one($id(user.id)).void)
+        coll.delete.one($id(user.id)).void
 
   def create(u: User): Funit =
     coll.insert.one(Streamer.make(u)).void.recover(lila.db.ignoreDuplicateKey)
@@ -159,9 +159,8 @@ final class StreamerApi(
   def uploadPicture(s: Streamer, picture: PicfitApi.FilePart, by: User): Funit =
     picfitApi
       .uploadFile(s"streamer:${s.id}", picture, userId = by.id)
-      .flatMap { pic =>
+      .flatMap: pic =>
         coll.update.one($id(s.id), $set("picture" -> pic.id)).void
-      }
 
   // unapprove after 6 weeks if you never streamed (was originally 1 week)
   def autoDemoteFakes: Funit =
@@ -183,11 +182,10 @@ final class StreamerApi(
   object approval:
 
     def request(user: User) =
-      find(user).flatMap {
+      find(user).flatMap:
         _.filter(!_.streamer.approval.granted).so { s =>
           coll.updateField($id(s.streamer.id), "approval.requested", true).void
         }
-      }
 
     def countRequests: Fu[Int] = coll.countSel:
       $doc(

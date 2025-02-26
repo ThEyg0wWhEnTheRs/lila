@@ -17,7 +17,6 @@ final private class MsgSecurity(
     relationApi: lila.core.relation.RelationApi,
     reportApi: lila.core.report.ReportApi,
     spam: lila.core.security.SpamApi,
-    chatPanicAllowed: lila.core.chat.panic.IsAllowed,
     textAnalyser: TextAnalyser
 )(using Executor, Scheduler, lila.core.config.RateLimit):
 
@@ -146,17 +145,17 @@ final private class MsgSecurity(
         fuccess(contacts.orig.isGranted(_.PublicMod)) >>| {
           relationApi.fetchBlocks(contacts.dest.id, contacts.orig.id).not >>&
             (create(contacts) >>| reply(contacts)) >>&
-            chatPanicAllowed(contacts.orig.id)(userApi.byId) >>&
             kidCheck(contacts, isNew) >>&
             userCache.getBotIds.map { botIds => !contacts.userIds.exists(botIds.contains) }
         }
 
     private def create(contacts: Contacts): Fu[Boolean] =
-      prefApi.getMessage(contacts.dest.id).flatMap {
-        case lila.core.pref.Message.NEVER  => fuccess(false)
-        case lila.core.pref.Message.FRIEND => relationApi.fetchFollows(contacts.dest.id, contacts.orig.id)
-        case lila.core.pref.Message.ALWAYS => fuccess(true)
-      }
+      prefApi
+        .getMessage(contacts.dest.id)
+        .flatMap:
+          case lila.core.pref.Message.NEVER  => fuccess(false)
+          case lila.core.pref.Message.FRIEND => relationApi.fetchFollows(contacts.dest.id, contacts.orig.id)
+          case lila.core.pref.Message.ALWAYS => fuccess(true)
 
     // Even if the dest prefs disallow it,
     // you can still reply if they recently messaged you,

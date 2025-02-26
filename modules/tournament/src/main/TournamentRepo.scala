@@ -222,9 +222,10 @@ final class TournamentRepo(val coll: Coll, playerCollName: CollName)(using Execu
       .list(5)
 
   private[tournament] def scheduledStillWorthEntering: Fu[List[Tournament]] =
-    coll.list[Tournament](startedSelect ++ scheduledSelect).dmap {
-      _.filter(_.isStillWorthEntering)
-    }
+    coll
+      .list[Tournament](startedSelect ++ scheduledSelect)
+      .dmap:
+        _.filter(_.isStillWorthEntering)
 
   def uniques(max: Int): Fu[List[Tournament]] =
     coll
@@ -247,22 +248,21 @@ final class TournamentRepo(val coll: Coll, playerCollName: CollName)(using Execu
       .sort($doc("startsAt" -> 1))
       .cursor[Tournament]()
       .listAll()
-      .map {
+      .map:
         _.flatMap { tour =>
-          tour.schedule.map(tour -> _)
+          tour.scheduleFreq.map(tour -> _)
         }.foldLeft(List.empty[Tournament] -> none[Schedule.Freq]) {
-          case ((tours, skip), (_, sched)) if skip.contains(sched.freq) => (tours, skip)
-          case ((tours, skip), (tour, sched)) =>
+          case ((tours, skip), (_, freq)) if skip.has(freq) => (tours, skip)
+          case ((tours, skip), (tour, freq)) =>
             (
               tour :: tours,
-              sched.freq match
+              freq match
                 case Schedule.Freq.Daily   => Schedule.Freq.Eastern.some
                 case Schedule.Freq.Eastern => Schedule.Freq.Daily.some
                 case _                     => skip
             )
         }._1
           .reverse
-      }
 
   def lastFinishedScheduledByFreq(freq: Schedule.Freq, since: Instant): Fu[List[Tournament]] =
     coll
@@ -303,10 +303,8 @@ final class TournamentRepo(val coll: Coll, playerCollName: CollName)(using Execu
       )
     )
 
-  def setSchedule(tourId: TourId, schedule: Option[Schedule]) =
-    schedule match
-      case None    => coll.unsetField($id(tourId), "schedule").void
-      case Some(s) => coll.updateField($id(tourId), "schedule", s).void
+  def setSchedule(tourId: TourId, schedule: Option[Scheduled]) =
+    coll.updateOrUnsetField($id(tourId), "schedule", schedule).void
 
   def insert(tour: Tournament) = coll.insert.one(tour)
 
@@ -324,6 +322,11 @@ final class TournamentRepo(val coll: Coll, playerCollName: CollName)(using Execu
       .sort($sort.asc("startsAt"))
       .cursor[Tournament](ReadPref.sec)
       .list(500)
+
+  def anonymize(tour: Tournament, u: UserId) = for
+    _ <- tour.winnerId.has(u).so(coll.updateField($id(tour.id), "winner", UserId.ghost).void)
+    _ <- tour.createdBy.is(u).so(coll.updateField($id(tour.id), "createdBy", UserId.ghost).void)
+  yield ()
 
   private[tournament] def sortedCursor(
       owner: User,

@@ -31,9 +31,8 @@ final class Tv(env: Env, apiC: => Api, gameC: => Game) extends LilaController(en
 
   def channels = apiC.ApiRequest:
     env.tv.tv.getChampions
-      .map {
+      .map:
         _.channels.map { (chan, champ) => chan.key -> champ }
-      }
       .map { Json.toJson(_) }
       .dmap(Api.ApiResult.Data.apply)
 
@@ -84,7 +83,7 @@ final class Tv(env: Env, apiC: => Api, gameC: => Game) extends LilaController(en
         val config =
           lila.api.GameApiV2.ByIdsConfig(
             ids = gameIds,
-            format = lila.api.GameApiV2.Format.byRequest(req),
+            format = lila.api.GameApiV2.Format.byRequest,
             flags = gameC.requestPgnFlags(extended = false).copy(delayMoves = false),
             perSecond = MaxPerSecond(30)
           )

@@ -9,6 +9,7 @@ import lila.core.config.*
 import lila.core.forum.BusForum
 import lila.core.report.SuspectId
 import lila.rating.UserWithPerfs.only
+import lila.core.mod.BoardApiMark
 
 @Module
 final class Env(
@@ -23,8 +24,8 @@ final class Env(
     gameApi: lila.core.game.GameApi,
     analysisRepo: lila.analyse.AnalysisRepo,
     userRepo: lila.user.UserRepo,
-    perfsRepo: lila.user.UserPerfsRepo,
     userApi: lila.user.UserApi,
+    perfsRepo: lila.user.UserPerfsRepo,
     chatApi: lila.chat.ChatApi,
     notifyApi: lila.core.notify.NotifyApi,
     historyApi: lila.core.history.HistoryApi,
@@ -35,6 +36,7 @@ final class Env(
     ircApi: lila.core.irc.IrcApi,
     msgApi: lila.core.msg.MsgApi
 )(using Executor, Scheduler, lila.core.i18n.Translator, akka.stream.Materializer):
+
   private lazy val logRepo        = ModlogRepo(db(CollName("modlog")))
   private lazy val assessmentRepo = AssessmentRepo(db(CollName("player_assessment")))
   private lazy val historyRepo    = HistoryRepo(db(CollName("mod_gaming_history")))
@@ -96,8 +98,8 @@ final class Env(
     "analysisReady" -> { case lila.analyse.actorApi.AnalysisReady(game, analysis) =>
       assessApi.onAnalysisReady(game, analysis)
     },
-    "deletePublicChats" -> { case lila.core.security.DeletePublicChats(userId) =>
-      publicChat.deleteAll(userId)
+    "deletePublicChats" -> { case lila.core.security.DeletePublicChats(u) =>
+      publicChat.deleteAll(u)
     },
     "autoWarning" -> { case lila.core.mod.AutoWarning(userId, subject) =>
       logApi.modMessage(userId, subject)(using UserId.lichessAsMe)
@@ -125,3 +127,7 @@ final class Env(
       else
         logger.info:
           s"${p.me} deletes post ${p.id} by ${p.by.so(_.value)} \"${p.text.take(200)}\""
+
+  Bus.sub[BoardApiMark]:
+    case BoardApiMark(userId, name) =>
+      api.autoMark(SuspectId(userId), s"Board API: ${name}")(using UserId.lichessAsMe)

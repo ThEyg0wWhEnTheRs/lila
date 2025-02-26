@@ -192,7 +192,7 @@ final class RelayApi(
           UnwindField("tour"),
           Match($doc("tour.tier".$exists(false))),
           Sort(Ascending("sync.nextAt")),
-          GroupField("tour.ownerId")("relays" -> PushField("$ROOT")),
+          GroupField("tour.ownerIds")("relays" -> PushField("$ROOT")),
           Project:
             $doc(
               "_id"    -> false,
@@ -226,7 +226,7 @@ final class RelayApi(
           "players"         -> tour.players,
           "teams"           -> tour.teams,
           "spotlight"       -> tour.spotlight,
-          "ownerId"         -> tour.ownerId.some,
+          "ownerIds"        -> tour.ownerIds.some,
           "pinnedStream"    -> tour.pinnedStream,
           "note"            -> tour.note
         )
@@ -322,7 +322,13 @@ final class RelayApi(
         round   <- copyRoundSourceSettings(updated)
         _       <- (from.name != round.name).so(studyApi.rename(round.studyId, round.name.into(StudyName)))
         setters <- tryBdoc(round).toEither.toFuture
-        unsets = $unsetCompute(from, updated, ("caption", _.caption), ("finishedAt", _.finishedAt))
+        unsets = $unsetCompute(
+          from,
+          updated,
+          ("caption", _.caption),
+          ("startedAt", _.startedAt),
+          ("finishedAt", _.finishedAt)
+        )
         _ <- roundRepo.coll.update.one($id(round.id), $set(setters) ++ unsets).void
         _ <- (round.sync.playing != from.sync.playing)
           .so(sendToContributors(round.id, "relaySync", jsonView.sync(round)))
@@ -373,17 +379,16 @@ final class RelayApi(
       yield rt.tour.some
 
   def deleteTourIfOwner(tour: RelayTour)(using me: Me): Fu[Boolean] =
-    (tour.ownerId.is(me) || Granter(_.StudyAdmin))
-      .so:
-        for
-          _      <- tourRepo.delete(tour)
-          rounds <- roundRepo.idsByTourOrdered(tour.id)
-          _      <- roundRepo.deleteByTour(tour)
-          _      <- rounds.map(_.into(StudyId)).sequentiallyVoid(studyApi.deleteById)
-        yield true
+    ((tour.isOwnedBy(me) || Granter(_.StudyAdmin)) && !tour.official).so:
+      for
+        _      <- tourRepo.delete(tour)
+        rounds <- roundRepo.idsByTourOrdered(tour.id)
+        _      <- roundRepo.deleteByTour(tour)
+        _      <- rounds.map(_.into(StudyId)).sequentiallyVoid(studyApi.deleteById)
+      yield true
 
   def canUpdate(tour: RelayTour)(using me: Me): Fu[Boolean] =
-    fuccess(Granter(_.StudyAdmin) || me.is(tour.ownerId)) >>|
+    fuccess(Granter(_.StudyAdmin) || tour.isOwnedBy(me)) >>|
       roundRepo
         .studyIdsOf(tour.id)
         .flatMap: ids =>
@@ -396,18 +401,19 @@ final class RelayApi(
     val tour = from.copy(
       id = RelayTour.makeId,
       name = RelayTour.Name(s"${from.name} (clone)"),
-      ownerId = me.userId,
+      ownerIds = NonEmptyList.one(me.userId),
       createdAt = nowInstant,
       syncedAt = none,
       tier = from.tier.map(_ => RelayTour.Tier.`private`)
     )
-    tourRepo.coll.insert.one(tour) >>
-      roundRepo
+    for
+      _ <- tourRepo.coll.insert.one(tour)
+      _ <- roundRepo
         .byTourOrderedCursor(from.id)
         .documentSource()
         .mapAsync(1)(cloneWithStudy(_, tour))
         .runWith(Sink.ignore)
-        .inject(tour)
+    yield tour
 
   private def cloneWithStudy(from: RelayRound, to: RelayTour)(using me: Me): Fu[RelayRound] =
     val round = from.copy(
@@ -494,6 +500,7 @@ final class RelayApi(
       .list[RelayRound]:
         RelayRoundRepo.selectors.finished(false) ++
           $doc(
+            "sync.upstream".$exists(true),
             "sync.until".$exists(false),
             "startedAt".$lt(nowInstant.minusHours(3)),
             $or(
@@ -522,12 +529,13 @@ final class RelayApi(
             _.sequentiallyVoid(studyApi.becomeAdmin(_, me))
 
   private def sendToContributors(id: RelayRoundId, t: String, msg: JsObject): Funit =
-    studyApi.members(id.into(StudyId)).map {
-      _.map(_.contributorIds).withFilter(_.nonEmpty).foreach { userIds =>
-        import lila.core.socket.SendTos
-        import lila.common.Json.given
-        import lila.core.socket.makeMessage
-        val payload = makeMessage(t, msg ++ Json.obj("id" -> id))
-        lila.common.Bus.publish(SendTos(userIds, payload), "socketUsers")
-      }
-    }
+    studyApi
+      .members(id.into(StudyId))
+      .map:
+        _.map(_.contributorIds).withFilter(_.nonEmpty).foreach { userIds =>
+          import lila.core.socket.SendTos
+          import lila.common.Json.given
+          import lila.core.socket.makeMessage
+          val payload = makeMessage(t, msg ++ Json.obj("id" -> id))
+          lila.common.Bus.publish(SendTos(userIds, payload), "socketUsers")
+        }

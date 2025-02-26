@@ -26,11 +26,12 @@ final class LilaComponents(
 
   given executor: Executor = scala.concurrent.ExecutionContextOpportunistic
 
-  lila.log("boot").info {
-    val appVersionCommit = ~configuration.getOptional[String]("app.version.commit")
-    val appVersionDate   = ~configuration.getOptional[String]("app.version.date")
-    s"lila version: $appVersionCommit $appVersionDate"
-  }
+  lila
+    .log("boot")
+    .info:
+      val appVersionCommit = ~configuration.getOptional[String]("app.version.commit")
+      val appVersionDate   = ~configuration.getOptional[String]("app.version.date")
+      s"lila version: $appVersionCommit $appVersionDate"
 
   import _root_.controllers.*
 
@@ -53,7 +54,7 @@ final class LilaComponents(
     import play.api.libs.ws.WSConfigParser
     import play.api.libs.ws.ahc.{ AhcConfigBuilder, AhcWSClientConfigParser, StandaloneAhcWSClient }
     new StandaloneAhcWSClient(
-      DefaultAsyncHttpClient:
+      DefaultAsyncHttpClient(
         AhcConfigBuilder(
           AhcWSClientConfigParser(
             WSConfigParser(configuration.underlying, environment.classLoader).parse(),
@@ -61,6 +62,7 @@ final class LilaComponents(
             environment.classLoader
           ).parse()
         ).modifyUnderlying(_.setIoThreadsCount(8)).build()
+      )
     )
 
   val env: lila.app.Env =

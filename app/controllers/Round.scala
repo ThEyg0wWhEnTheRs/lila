@@ -7,7 +7,7 @@ import lila.app.{ *, given }
 import lila.chat.Chat
 import lila.common.HTTPRequest
 import lila.common.Json.given
-import lila.core.data.Preload
+import scalalib.data.Preload
 import lila.core.id.{ GameAnyId, GameFullId }
 import lila.round.RoundGame.*
 import lila.tournament.Tournament as Tour
@@ -200,9 +200,8 @@ final class Round(
   private[controllers] def getWatcherChat(
       game: GameModel
   )(using ctx: Context): Fu[Option[lila.chat.UserChat.Mine]] = {
-    ctx.kid.no && (ctx.noBot || ctx.userId.exists(game.userIds.has)) && ctx.me.fold(
-      HTTPRequest.isHuman(ctx.req)
-    )(env.chat.panic.allowed(_)) && {
+    (ctx.noBot || ctx.userId.exists(game.userIds.has)) &&
+    (ctx.isAuth || HTTPRequest.isHuman(ctx.req)) && {
       game.finishedOrAborted || !ctx.userId.exists(game.userIds.has)
     }
   }.soFu:
@@ -211,41 +210,40 @@ final class Round(
   private[controllers] def getPlayerChat(game: GameModel, tour: Option[Tour])(using
       ctx: Context
   ): Fu[Option[Chat.GameOrEvent]] =
-    ctx.kid.no.so:
-      def toEventChat(resource: String)(c: lila.chat.UserChat.Mine) =
-        Chat
-          .GameOrEvent:
-            Right:
-              (c.truncate(100), lila.chat.Chat.ResourceId(resource))
-          .some
-      (game.tournamentId, game.simulId, game.swissId) match
-        case (Some(tid), _, _) =>
-          val hasChat = ctx.isAuth && tour.forall(tournamentC.canHaveChat(_, none))
-          hasChat.so(
+    def toEventChat(resource: String)(c: lila.chat.UserChat.Mine) =
+      Chat
+        .GameOrEvent:
+          Right:
+            (c.truncate(100), lila.chat.Chat.ResourceId(resource))
+        .some
+    (game.tournamentId, game.simulId, game.swissId) match
+      case (Some(tid), _, _) =>
+        val hasChat = ctx.isAuth && tour.forall(tournamentC.canHaveChat(_, none))
+        hasChat.so(
+          env.chat.api.userChat.cached
+            .findMine(tid.into(ChatId))
+            .dmap(toEventChat(s"tournament/$tid"))
+        )
+      case (_, Some(sid), _) =>
+        env.chat.api.userChat.cached.findMine(sid.into(ChatId)).dmap(toEventChat(s"simul/$sid"))
+      case (_, _, Some(sid)) =>
+        env.swiss.api
+          .roundInfo(sid)
+          .flatMapz(swissC.canHaveChat)
+          .flatMapz:
             env.chat.api.userChat.cached
-              .findMine(tid.into(ChatId))
-              .dmap(toEventChat(s"tournament/$tid"))
-          )
-        case (_, Some(sid), _) =>
-          env.chat.api.userChat.cached.findMine(sid.into(ChatId)).dmap(toEventChat(s"simul/$sid"))
-        case (_, _, Some(sid)) =>
-          env.swiss.api
-            .roundInfo(sid)
-            .flatMapz(swissC.canHaveChat)
-            .flatMapz:
-              env.chat.api.userChat.cached
-                .findMine(sid.into(ChatId))
-                .dmap(toEventChat(s"swiss/$sid"))
-        case _ =>
-          game.hasChat.so:
-            for
-              chat  <- env.chat.api.playerChat.findIf(game.id.into(ChatId), !game.justCreated)
-              lines <- lila.chat.JsonView.asyncLines(chat)
-            yield Chat
-              .GameOrEvent:
-                Left:
-                  Chat.Restricted(chat, lines, restricted = game.sourceIs(_.Lobby) && ctx.isAnon)
-              .some
+              .findMine(sid.into(ChatId))
+              .dmap(toEventChat(s"swiss/$sid"))
+      case _ =>
+        game.hasChat.so:
+          for
+            chat  <- env.chat.api.playerChat.findIf(game.id.into(ChatId), !game.justCreated)
+            lines <- lila.chat.JsonView.asyncLines(chat)
+          yield Chat
+            .GameOrEvent:
+              Left:
+                Chat.Restricted(chat, lines, restricted = game.sourceIs(_.Lobby) && ctx.isAnon)
+            .some
 
   def sides(gameId: GameId, color: Color) = Open:
     FoundSnip(env.round.proxyRepo.pov(gameId, color)): pov =>
@@ -261,7 +259,7 @@ final class Round(
   def writeNote(gameId: GameId) = AuthBody { ctx ?=> me ?=>
     bindForm(env.round.noteApi.form)(
       _ => BadRequest,
-      text => env.round.noteApi.set(gameId, me, text.trim.take(10000)).inject(NoContent)
+      text => env.round.noteApi.set(gameId, me, text.trim.take(10000)).inject(jsonOkResult)
     )
   }
 

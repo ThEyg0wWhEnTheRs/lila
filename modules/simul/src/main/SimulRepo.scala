@@ -101,12 +101,11 @@ final private[simul] class SimulRepo(val coll: Coll, gameRepo: GameRepo)(using E
       .hint(coll.hint($doc("hostSeenAt" -> -1)))
       .cursor[Simul]()
       .list(50)
-      .map {
+      .map:
         _.foldLeft(List.empty[Simul]) {
           case (acc, sim) if acc.exists(_.hostId == sim.hostId) => acc
           case (acc, sim)                                       => sim :: acc
         }.reverse
-      }
 
   def allStarted: Fu[List[Simul]] =
     coll
@@ -169,4 +168,14 @@ final private[simul] class SimulRepo(val coll: Coll, gameRepo: GameRepo)(using E
       createdSelect ++ $doc(
         "createdAt" -> $doc("$lt" -> (nowInstant.minusMinutes(60)))
       )
+    )
+
+  private[simul] def anonymizeHost(id: UserId) =
+    coll.update.one($doc("hostId" -> id), $set("hostId" -> UserId.ghost), multi = true)
+
+  private[simul] def anonymizePlayers(id: UserId) =
+    coll.update.one(
+      $doc("pairings.player.user"   -> id),
+      $set("pairings.$.player.user" -> UserId.ghost),
+      multi = true
     )

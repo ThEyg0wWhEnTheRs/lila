@@ -42,7 +42,7 @@ final class Signup(
       val ip = HTTPRequest.ipAddress(req)
       store.recentByIpExists(ip, 7.days).flatMap { ipExists =>
         if ipExists then fuccess(YesBecauseIpExists)
-        else if HTTPRequest.weirdUA(req) then fuccess(YesBecauseUA)
+        else if UserAgentParser.trust.isSuspicious(req) then fuccess(YesBecauseUA)
         else
           print.fold[Fu[MustConfirmEmail]](fuccess(YesBecausePrintMissing)): fp =>
             store
@@ -50,7 +50,9 @@ final class Signup(
               .map: printFound =>
                 if printFound then YesBecausePrintExists
                 else if suspIp then YesBecauseIpSusp
-                else if email.domain.exists(DisposableEmailDomain.whitelisted) then Nope
+                else if email.domain.exists: dom =>
+                    DisposableEmailDomain.whitelisted(dom) && !DisposableEmailDomain.isOutlook(dom)
+                then Nope
                 else YesBecauseEmailDomain
       }
 
@@ -58,7 +60,7 @@ final class Signup(
       blind: Boolean
   )(using req: Request[?], lang: Lang, formBinding: FormBinding): Fu[Signup.Result] =
     val ip = HTTPRequest.ipAddress(req)
-    forms.signup.website.flatMap {
+    forms.signup.website.flatMap:
       _.form
         .bindFromRequest()
         .fold[Fu[Signup.Result]](
@@ -101,7 +103,6 @@ final class Signup(
                     }
             yield result
         )
-    }
 
   private def confirmOrAllSet(
       email: EmailAddress,

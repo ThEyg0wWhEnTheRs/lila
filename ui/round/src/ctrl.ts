@@ -777,7 +777,7 @@ export default class RoundController implements MoveRootCtrl {
 
   rematch(accept?: boolean): boolean {
     if (accept === undefined)
-      return this.data.opponent.offeringRematch === true || this.data.player.offeringRematch === true;
+      return !!this.data.opponent.offeringRematch || !!this.data.player.offeringRematch;
     else if (accept) {
       if (this.data.game.rematch) location.href = gameRoute(this.data.game.rematch, this.data.opponent.color);
       if (!game.rematchable(this.data)) return false;
@@ -794,7 +794,7 @@ export default class RoundController implements MoveRootCtrl {
   canOfferDraw = (): boolean =>
     !this.preventDrawOffer &&
     game.drawable(this.data) &&
-    (this.data.player.lastDrawOfferAtPly || -99) < this.ply - 20;
+    (this.data.player.lastDrawOfferAtPly || -99) < this.lastPly() - 20;
 
   cancelTakebackPreventDraws = (): void => {
     this.socket.sendLoading('takeback-no');
@@ -823,7 +823,7 @@ export default class RoundController implements MoveRootCtrl {
   };
 
   private doOfferDraw = () => {
-    this.data.player.lastDrawOfferAtPly = this.ply;
+    this.data.player.lastDrawOfferAtPly = this.lastPly();
     this.socket.sendLoading('draw-yes', null);
   };
 

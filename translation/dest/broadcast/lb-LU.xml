@@ -10,7 +10,6 @@
   <string name="addRound">Ronn hinzufügen</string>
   <string name="ongoing">Am Gaang</string>
   <string name="upcoming">Demnächst</string>
-  <string name="completed">Eriwwer</string>
   <string name="roundName">Ronnennumm</string>
   <string name="roundNumber">Ronnennummer</string>
   <string name="tournamentName">Turnéiernumm</string>
@@ -37,7 +36,7 @@
   <string name="fideProfile">FIDE-Profil</string>
   <string name="federation">Federatioun</string>
   <string name="ageThisYear">Alter dëst Joer</string>
-  <string name="unrated" comment="Please do not translate simply as &quot;casual&quot;. &quot;Unrated&quot; here refers to tournaments that are organised outside of Lichess. The rating in question will usually align to a FIDE federation.">Ongewäert</string>
+  <string name="unrated">Ongewäert</string>
   <string name="recentTournaments">Rezent Turnéieren</string>
   <string name="teams">Ekippen</string>
   <string name="overview">Iwwersiicht</string>

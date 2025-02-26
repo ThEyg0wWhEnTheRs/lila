@@ -39,24 +39,24 @@ final class Simul(env: Env) extends LilaController(env):
     ).tupled
 
   def show(id: SimulId) = Open:
-    env.simul.repo.find(id).flatMap {
-      _.fold(simulNotFound): sim =>
-        WithMyPerf(sim.mainPerfType):
-          for
-            verdicts <- env.simul.api.getVerdicts(sim)
-            version  <- env.simul.version(sim.id)
-            json     <- env.simul.jsonView(sim, verdicts)
-            chat     <- canHaveChat(sim).soFu(env.chat.api.userChat.cached.findMine(sim.id.into(ChatId)))
-            stream   <- env.streamer.liveStreamApi.one(sim.hostId)
-            page     <- renderPage(views.simul.show(sim, version, json, chat, stream, verdicts))
-          yield Ok(page).noCache
-    }
+    env.simul.repo
+      .find(id)
+      .flatMap:
+        _.fold(simulNotFound): sim =>
+          WithMyPerf(sim.mainPerfType):
+            for
+              verdicts <- env.simul.api.getVerdicts(sim)
+              version  <- env.simul.version(sim.id)
+              json     <- env.simul.jsonView(sim, verdicts)
+              chat     <- canHaveChat(sim).soFu(env.chat.api.userChat.cached.findMine(sim.id.into(ChatId)))
+              stream   <- env.streamer.liveStreamApi.one(sim.hostId)
+              page     <- renderPage(views.simul.show(sim, version, json, chat, stream, verdicts))
+            yield Ok(page).noCache
 
   private[controllers] def canHaveChat(simul: Sim)(using ctx: Context): Boolean =
-    ctx.kid.no && ctx.noBot &&                    // no public chats for kids or bots
-      ctx.me.fold(HTTPRequest.isHuman(ctx.req)) { // anon can see public chats
-        env.chat.panic.allowed(_)
-      } && simul.conditions.teamMember
+    ctx.kid.no && ctx.noBot && // no public chats for kids or bots
+      (ctx.isAuth || HTTPRequest.isHuman(ctx.req)) &&
+      simul.conditions.teamMember
         .map(_.teamId)
         .forall: teamId =>
           ctx.userId.exists:
@@ -72,12 +72,13 @@ final class Simul(env: Env) extends LilaController(env):
 
   def abort(simulId: SimulId) = Auth { ctx ?=> me ?=>
     AsHost(simulId): simul =>
-      env.simul.api.abort(simul.id).inject {
-        if !simul.isHost(me) then env.mod.logApi.terminateTournament(simul.fullName)
-        if HTTPRequest.isXhr(ctx.req)
-        then jsonOkResult
-        else Redirect(routes.Simul.home)
-      }
+      env.simul.api
+        .abort(simul.id)
+        .inject:
+          if !simul.isHost(me) then env.mod.logApi.terminateTournament(simul.fullName)
+          if HTTPRequest.isXhr(ctx.req)
+          then jsonOkResult
+          else Redirect(routes.Simul.home)
   }
 
   def accept(simulId: SimulId, userId: UserStr) = Open:
@@ -99,7 +100,7 @@ final class Simul(env: Env) extends LilaController(env):
     NoLameOrBot:
       Ok.async:
         env.team.api
-          .lightsByTourLeader(me)
+          .lightsOf(me)
           .map: teams =>
             views.simul.form.create(forms.create(teams), teams)
   }
@@ -107,7 +108,7 @@ final class Simul(env: Env) extends LilaController(env):
   def create = AuthBody { ctx ?=> me ?=>
     NoLameOrBot:
       env.team.api
-        .lightsByTourLeader(me)
+        .lightsOf(me)
         .flatMap: teams =>
           bindForm(forms.create(teams))(
             err => BadRequest.page(views.simul.form.create(err, teams)),
@@ -129,16 +130,17 @@ final class Simul(env: Env) extends LilaController(env):
   }
 
   def withdraw(id: SimulId) = Auth { ctx ?=> me ?=>
-    env.simul.api.removeApplicant(id, me).inject {
-      if HTTPRequest.isXhr(ctx.req) then jsonOkResult
-      else Redirect(routes.Simul.show(id))
-    }
+    env.simul.api
+      .removeApplicant(id, me)
+      .inject:
+        if HTTPRequest.isXhr(ctx.req) then jsonOkResult
+        else Redirect(routes.Simul.show(id))
   }
 
   def edit(id: SimulId) = Auth { ctx ?=> me ?=>
     AsHost(id): simul =>
       Ok.async:
-        env.team.api.lightsByTourLeader(me).map { teams =>
+        env.team.api.lightsOf(me).map { teams =>
           views.simul.form.edit(forms.edit(teams, simul), teams, simul)
         }
   }
@@ -146,7 +148,7 @@ final class Simul(env: Env) extends LilaController(env):
   def update(id: SimulId) = AuthBody { ctx ?=> me ?=>
     AsHost(id): simul =>
       env.team.api
-        .lightsByTourLeader(me)
+        .lightsOf(me)
         .flatMap: teams =>
           def errPage(err: lila.simul.SimulForm.EitherForm) =
             BadRequest.page(views.simul.form.edit(err, teams, simul))

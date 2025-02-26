@@ -8,7 +8,6 @@ import play.api.ConfigLoader
 import scala.util.Try
 
 import lila.common.autoconfig.*
-import lila.core.config.ConfigName
 import lila.core.net.IpAddress
 import lila.core.security.IsProxy
 
@@ -73,6 +72,7 @@ object Location:
 
   def isSuspicious(loc: Location) =
     loc == unknown ||
-      loc.region.has("Kirov Oblast")
+      loc.region.has("Kirov Oblast") ||
+      (loc.region.has("Samsun") && loc.city.has("Samsun"))
 
   case class WithProxy(location: Location, proxy: IsProxy)

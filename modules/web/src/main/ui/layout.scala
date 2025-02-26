@@ -2,8 +2,9 @@ package lila.web
 package ui
 
 import play.api.i18n.Lang
+import scalalib.model.Language
 
-import lila.core.i18n.{ I18nModule, Language }
+import lila.core.i18n.I18nModule
 import lila.core.report.ScoreThresholds
 import lila.ui.*
 
@@ -45,13 +46,13 @@ final class layout(helpers: Helpers, assetHelper: lila.web.ui.AssetFullHelper)(
   def fontPreload(using ctx: Context) = frag(
     preload(assetUrl("font/lichess.woff2"), "font", crossorigin = true, "font/woff2".some),
     preload(
-      staticAssetUrl("font/noto-sans-v14-latin-regular.woff2"),
+      assetUrl("font/noto-sans-latin.woff2"),
       "font",
       crossorigin = true,
       "font/woff2".some
     ),
     (!ctx.pref.pieceNotationIsLetter).option(
-      preload(staticAssetUrl("font/lichess.chess.woff2"), "font", crossorigin = true, "font/woff2".some)
+      preload(assetUrl("font/lichess-chess.woff2"), "font", crossorigin = true, "font/woff2".some)
     )
   )
 
@@ -59,7 +60,8 @@ final class layout(helpers: Helpers, assetHelper: lila.web.ui.AssetFullHelper)(
     val challengeTitle = trans.challenge.challengesX.txt(challenges)
     val notifTitle     = trans.site.notificationsX.txt(notifs)
     spaceless:
-      s"""<div>
+      s"""
+<div>
   <button id="challenge-toggle" class="toggle link">
     <span title="$challengeTitle" role="status" aria-label="$challengeTitle" class="data-count" data-count="$challenges" data-icon="${Icon.Swords}"></span>
   </button>
@@ -98,7 +100,7 @@ final class layout(helpers: Helpers, assetHelper: lila.web.ui.AssetFullHelper)(
     )
 
   val manifests = raw:
-    """<link rel="manifest" href="/manifest.json"><meta name="twitter:site" content="@lichess">"""
+    """<link rel="manifest" href="/manifest.json">"""
 
   val favicons = raw:
     List(512, 256, 192, 128, 64)
@@ -163,20 +165,19 @@ final class layout(helpers: Helpers, assetHelper: lila.web.ui.AssetFullHelper)(
   def inlineJs(nonce: Nonce, modules: EsmList = Nil): Frag =
     val code =
       (Esm("site").some :: modules)
-        .flatMap(_.flatMap(m => assetHelper.manifest.inlineJs(m.key).map(js => s"(()=>{${js}})()")))
+        .flatMap(_.flatMap(m => assetHelper.manifest.inlineJs(m.key).map(js => s"(function(){${js}})()")))
         .mkString(";")
     embedJsUnsafe(code)(nonce.some)
 
   private def hrefLang(langStr: String, path: String) =
     s"""<link rel="alternate" hreflang="$langStr" href="$netBaseUrl$path"/>"""
 
-  def hrefLangs(path: LangPath) = raw {
+  def hrefLangs(path: LangPath) = raw:
     val pathEnd = if path.value == "/" then "" else path.value
     hrefLang("x-default", path.value) + hrefLang("en", path.value) +
       popularAlternateLanguages.map { l =>
         hrefLang(l.value, s"/$l$pathEnd")
       }.mkString
-  }
 
   def pageZoom(using ctx: Context): Int = {
     def oldZoom = ctx.req.session.get("zoom2").flatMap(_.toIntOption).map(_ - 100)
@@ -220,13 +221,14 @@ final class layout(helpers: Helpers, assetHelper: lila.web.ui.AssetFullHelper)(
   def spaceless(html: String) = raw(spaceRegex.replaceAllIn(html.replace("\\n", ""), ""))
 
   def lichessFontFaceCss = spaceless:
-    s"""<style>@font-face {
-        font-family: 'lichess';
-        font-display: block;
-        src:
-          url('${assetUrl("font/lichess.woff2")}') format('woff2'),
-          url('${assetUrl("font/lichess.woff")}') format('woff');
-      }</style>"""
+    s"""
+<style>
+  @font-face {
+    font-family: 'lichess';
+    font-display: block;
+    src: url('${assetUrl("font/lichess.woff2")}') format('woff2')
+  }
+</style>"""
 
   def bottomHtml(using ctx: Context) = frag(
     ctx.me

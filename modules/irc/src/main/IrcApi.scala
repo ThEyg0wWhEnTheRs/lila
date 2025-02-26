@@ -8,8 +8,9 @@ import lila.core.study.data.StudyChapterName
 
 final class IrcApi(
     zulip: ZulipClient,
-    noteApi: lila.core.user.NoteApi
-)(using lightUser: LightUser.Getter, ec: Executor)
+    noteApi: lila.core.user.NoteApi,
+    lightUser: LightUser.Getter
+)(using Executor)
     extends lila.core.irc.IrcApi:
 
   import IrcApi.*
@@ -83,12 +84,6 @@ final class IrcApi(
     lightUser(modId).flatMapz: mod =>
       zulip(_.mod.adminMonitor(tpe), mod.name.value):
         s"${markdown.userLink(mod.name)} :$icon: ${markdown.linkifyPostsAndUsers(text)}"
-
-  def chatPanic(v: Boolean)(using mod: LightUser.Me): Funit =
-    val msg =
-      s":stop: ${markdown.modLink(mod.name)} ${if v then "enabled" else "disabled"} ${markdown
-          .lichessLink("/mod/chat-panic", " Chat Panic")}"
-    zulip(_.mod.log, "chat panic")(msg) >> zulip(_.mod.commsPublic, "main")(msg)
 
   def ublogPost(
       user: LightUser,

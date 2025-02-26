@@ -28,7 +28,7 @@ final class Setup(
             processor.ai(config).flatMap { pov =>
               negotiateApi(
                 html = redirectPov(pov),
-                api = _ => env.api.roundApi.player(pov, lila.core.data.Preload.none, none).map(Created(_))
+                api = _ => env.api.roundApi.player(pov, scalalib.data.Preload.none, none).map(Created(_))
               )
             }
         )
@@ -210,7 +210,8 @@ final class Setup(
           doubleJsonFormError,
           config =>
             processor.apiAi(config).map { pov =>
-              Created(env.game.jsonView.baseWithChessDenorm(pov.game, config.fen)).as(JSON)
+              val json = env.game.jsonView.apiAiNewGame(pov, config.fen)
+              Created(json).as(JSON)
             }
         )
   }

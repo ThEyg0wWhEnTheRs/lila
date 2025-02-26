@@ -114,6 +114,8 @@ GET   /fide                            controllers.Fide.index(page: Int ?= 1, q:
 GET   /fide/federation                 controllers.Fide.federations(page: Int ?= 1)
 GET   /fide/federation/:name           controllers.Fide.federation(name, page: Int ?= 1)
 GET   /fide/:fideId/:name              controllers.Fide.show(fideId: chess.FideId, name, page: Int ?= 1)
+GET   /api/fide/player/:id             controllers.Fide.apiShow(id: chess.FideId)
+GET   /api/fide/player                 controllers.Fide.apiSearch(q: String)
 
 GET   /dasher                          controllers.Dasher.get
 
@@ -315,6 +317,7 @@ GET   /patron/stripe/update-payment    controllers.Plan.updatePaymentCallback
 POST  /patron/ipn                      controllers.Plan.payPalIpn
 POST  /patron/paypal/checkout          controllers.Plan.payPalCheckout
 POST  /patron/paypal/capture/:id       controllers.Plan.payPalCapture(id)
+POST  /api/patron/stripe/checkout      controllers.Plan.apiStripeCheckout
 GET   /features                        controllers.Plan.features
 
 # Practice
@@ -524,6 +527,7 @@ GET   /$lang<\w\w\w?>/signup           controllers.Auth.signupLang(lang: Languag
 GET   /signup/check-your-email         controllers.Auth.checkYourEmail
 POST  /signup/fix-email                controllers.Auth.fixEmail
 GET   /signup/confirm/:token           controllers.Auth.signupConfirmEmail(token)
+POST  /signup/confirm/:token           controllers.Auth.signupConfirmEmailPost(token)
 GET   /password/reset                  controllers.Auth.passwordReset
 POST  /password/reset/send             controllers.Auth.passwordResetApply
 GET   /password/reset/sent/:email      controllers.Auth.passwordResetSent(email)
@@ -536,7 +540,6 @@ POST  /auth/token/:token               controllers.Auth.loginWithTokenPost(token
 GET   /auth/magic-link                 controllers.Auth.magicLink
 POST  /auth/magic-link/send            controllers.Auth.magicLinkApply
 GET   /auth/magic-link/sent            controllers.Auth.magicLinkSent
-GET   /auth/magic-link/login/:token    controllers.Auth.magicLinkLogin(token)
 
 # Mod
 POST  /mod/:username/alt/:v            controllers.Mod.alt(username: UserStr, v: Boolean)
@@ -584,8 +587,6 @@ POST  /mod/:username/gdpr-erase        controllers.Mod.gdprErase(username: UserS
 GET   /mod/public-chat                 controllers.Mod.publicChat
 POST  /mod/public-chat/timeout         controllers.Mod.publicChatTimeout
 GET   /mod/email-confirm               controllers.Mod.emailConfirm
-GET   /mod/chat-panic                  controllers.Mod.chatPanic
-POST  /mod/chat-panic                  controllers.Mod.chatPanicPost
 GET   /mod/print/:fh                   controllers.Mod.print(fh)
 POST  /mod/print/ban/:v/:fh            controllers.Mod.printBan(v: Boolean, fh)
 GET   /mod/ip/:ip                      controllers.Mod.singleIp(ip)
@@ -739,6 +740,7 @@ POST  /api/bulk-pairing/:id/start-clocks  controllers.BulkPairing.startClocks(id
 
 GET   /api/games/user/:username        controllers.Game.apiExportByUser(username: UserStr)
 GET   /api/games/export/imports        controllers.Game.apiExportByUserImportedGames()
+GET   /api/games/export/bookmarks      controllers.Game.apiExportByUserBookmarks()
 
 # Lichess Mobile
 GET   /api/mobile/my-games             controllers.Api.mobileGames
@@ -774,7 +776,10 @@ POST  /account/email                   controllers.Account.emailApply
 GET   /contact/email-confirm/help      controllers.Account.emailConfirmHelp
 GET   /account/email/confirm/:token    controllers.Account.emailConfirm(token)
 GET   /account/close                   controllers.Account.close
-POST  /account/closeConfirm            controllers.Account.closeConfirm
+POST  /account/close                   controllers.Account.closeConfirm
+GET   /account/delete                  controllers.Account.delete
+POST  /account/delete                  controllers.Account.deleteConfirm
+GET   /account/delete/done             controllers.Account.deleteDone
 GET   /account/profile                 controllers.Account.profile
 POST  /account/profile                 controllers.Account.profileApply
 GET   /account/username                controllers.Account.username

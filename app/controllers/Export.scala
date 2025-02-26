@@ -12,29 +12,29 @@ import lila.pref.{ PieceSet, Theme }
 
 final class Export(env: Env) extends LilaController(env):
 
-  private def exportImageOf[A](fetch: Fu[Option[A]])(convert: A => Fu[Result]) = Anon:
+  private def exportImageOf[A](fetch: Fu[Option[A]])(convert: A => Fu[Result])(using Context) =
     Found(fetch): res =>
       limit.exportImage(((), req.ipAddress), rateLimited)(convert(res))
 
-  def gif(id: GameId, color: Color, theme: Option[String], piece: Option[String]) =
-    exportImageOf(env.game.gameRepo.gameWithInitialFen(id)) { g =>
-      env.game.gifExport
-        .fromPov(Pov(g.game, color), g.fen, Theme(theme).name, PieceSet.get(piece).name)
-        .pipe(stream(cacheSeconds = if g.game.finishedOrAborted then 3600 * 24 else 10))
-    }
+  def gif(id: GameId, color: Color, theme: Option[String], piece: Option[String]) = Anon:
+    NoCrawlersUnlessPreview:
+      exportImageOf(env.game.gameRepo.gameWithInitialFen(id)): g =>
+        env.game.gifExport
+          .fromPov(Pov(g.game, color), g.fen, Theme(theme).name, PieceSet.get(piece).name)
+          .pipe(stream(cacheSeconds = if g.game.finishedOrAborted then 3600 * 24 else 10))
 
   def legacyGameThumbnail(id: GameId, theme: Option[String], piece: Option[String]) = Anon:
     MovedPermanently(routes.Export.gameThumbnail(id, theme, piece).url)
 
-  def gameThumbnail(id: GameId, theme: Option[String], piece: Option[String]) =
+  def gameThumbnail(id: GameId, theme: Option[String], piece: Option[String]) = Anon:
     exportImageOf(env.game.gameRepo.game(id)) { game =>
       env.game.gifExport
         .gameThumbnail(game, Theme(theme).name, PieceSet.get(piece).name)
         .pipe(stream(cacheSeconds = if game.finishedOrAborted then 3600 * 24 else 10))
     }
 
-  def puzzleThumbnail(id: PuzzleId, theme: Option[String], piece: Option[String]) =
-    exportImageOf(env.puzzle.api.puzzle.find(id)) { puzzle =>
+  def puzzleThumbnail(id: PuzzleId, theme: Option[String], piece: Option[String]) = Anon:
+    exportImageOf(env.puzzle.api.puzzle.find(id)): puzzle =>
       env.game.gifExport
         .thumbnail(
           situation = puzzle.situationAfterInitialMove.err(s"invalid puzzle ${puzzle.id}"),
@@ -45,7 +45,6 @@ final class Export(env: Env) extends LilaController(env):
           description = s"puzzleThumbnail ${puzzle.id}"
         )
         .pipe(stream())
-    }
 
   def fenThumbnail(
       fen: String,
@@ -54,8 +53,8 @@ final class Export(env: Env) extends LilaController(env):
       variant: Option[Variant.LilaKey],
       theme: Option[String],
       piece: Option[String]
-  ) =
-    exportImageOf(fuccess(Fen.read(Variant.orDefault(variant), Fen.Full.clean(fen)))) { situation =>
+  ) = Anon:
+    exportImageOf(fuccess(Fen.read(Variant.orDefault(variant), Fen.Full.clean(fen)))): situation =>
       env.game.gifExport
         .thumbnail(
           situation = situation,
@@ -66,7 +65,6 @@ final class Export(env: Env) extends LilaController(env):
           description = s"fenThumbnail $fen"
         )
         .pipe(stream())
-    }
 
   private def stream(contentType: String = "image/gif", cacheSeconds: Int = 1209600)(
       upstream: Fu[Source[ByteString, ?]]
