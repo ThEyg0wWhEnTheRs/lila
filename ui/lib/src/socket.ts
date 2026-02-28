@@ -17,17 +17,17 @@ type Sri = string;
 type Tpe = string;
 type Payload = any;
 type Version = number;
-interface MsgBase {
+type MsgBase = {
   t: Tpe;
   d?: Payload;
-}
-interface MsgIn extends MsgBase {
+};
+type MsgIn = MsgBase & {
   v?: Version;
-}
-interface MsgOut extends MsgBase {}
-interface MsgAck extends MsgOut {
+};
+type MsgOut = MsgBase;
+type MsgAck = MsgOut & {
   at: number;
-}
+};
 
 interface Options {
   idle: boolean;

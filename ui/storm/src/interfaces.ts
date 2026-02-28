@@ -1,13 +1,13 @@
 import type { Prop } from 'lib';
 import type { Config, PuzPrefs, Puzzle } from 'lib/puz/interfaces';
 
+export type StormPrefs = PuzPrefs;
+
 export interface StormOpts {
   puzzles: Puzzle[];
   key?: string;
   pref: StormPrefs;
 }
-
-export interface StormPrefs extends PuzPrefs {}
 
 export interface StormData {
   puzzles: Puzzle[];
