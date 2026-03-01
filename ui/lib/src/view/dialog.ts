@@ -176,11 +176,11 @@ class DialogWrapper implements Dialog {
     this.dialogEvents.addListener(dialog, 'close', this.onRemove);
     if (!o.noCloseButton)
       this.dialogEvents.addListener(
-        dialog.querySelector('.close-button-anchor > .close-button')!,
+        dialog.querySelector<HTMLButtonElement>('.close-button-anchor > .close-button')!,
         'click',
         e => {
           this.close('cancel');
-          // If closed with a primary click, blur the element that was used to open the dialog before:
+          // If closed with a primary click, blur the element that was used to open the dialog before
           blurIfPrimaryClick(e);
         },
       );
