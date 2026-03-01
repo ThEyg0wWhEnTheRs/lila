@@ -18,9 +18,10 @@ export const timeago: (d: DateLike) => string = (date: DateLike) =>
   formatAgo((Date.now() - toDate(date).getTime()) / 1000);
 
 // format Date / string / timestamp to Date instance.
+const IS_NUMBER = /^\d+$/;
 export const toDate = (input: DateLike): Date => {
   if (input instanceof Date) return input;
-  else if (typeof input === 'string') return new Date(/^\d+$/.test(input) ? parseInt(input, 10) : input);
+  else if (typeof input === 'string') return new Date(IS_NUMBER.test(input) ? parseInt(input, 10) : input);
   return new Date(input);
 };
 
