@@ -30,6 +30,8 @@ final private class TeamForm(teamRepo: TeamRepo, captcha: CaptchaApi, flairApi: 
       Fields.description,
       Fields.descPrivate,
       Fields.request,
+      Fields.chatOrDefault,
+      Fields.forumOrDefault,
       "flair" -> flairApi.formField(),
       Fields.gameId,
       Fields.move
@@ -123,6 +125,8 @@ private case class TeamSetup(
     description: Markdown,
     descPrivate: Option[Markdown],
     request: Boolean,
+    chat: Access,
+    forum: Access,
     flair: Option[Flair],
     gameId: GameId,
     move: String
@@ -177,6 +181,10 @@ object TeamForm:
     private def inAccess(cs: List[Access]) = numberIn(cs.map(_.id)).transform[Access](Access.byId, _.id)
     val chat = "chat" -> inAccess(Access.allInTeam)
     val forum = "forum" -> inAccess(Access.all)
+    def chatOrDefault =
+      "chat" -> optional(inAccess(Access.allInTeam)).transform(_.getOrElse(Access.None), Some(_))
+    def forumOrDefault =
+      "forum" -> optional(inAccess(Access.all)).transform(_.getOrElse(Access.None), Some(_))
     val hideMembers = "hideMembers" -> boolean
 
 object TeamSingleChange:
