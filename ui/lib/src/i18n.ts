@@ -21,7 +21,7 @@ export const timeago: (d: DateLike) => string = (date: DateLike) =>
 const IS_NUMBER = /^\d+$/;
 export const toDate = (input: DateLike): Date => {
   if (input instanceof Date) return input;
-  else if (typeof input === 'string') return new Date(IS_NUMBER.test(input) ? parseInt(input, 10) : input);
+  else if (typeof input === 'string') return new Date(IS_NUMBER.test(input) ? Number(input) : input);
   return new Date(input);
 };
 
