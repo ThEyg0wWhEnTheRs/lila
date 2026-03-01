@@ -156,7 +156,8 @@ export function repeater(f: () => void, additionalStopCond?: () => boolean): voi
 }
 
 // Prevents the clicked element from acquiring focus on primary mouse clicks.
-export function blurIfPrimaryClick(e: MouseEvent): void {
+export function blurIfPrimaryClick(e: Event): void {
+  if (!(e instanceof MouseEvent)) return;
   const target = document.activeElement;
   if (target instanceof HTMLElement && e.button === 0 && (e.clientX || e.clientY))
     requestAnimationFrame(() => target.blur());

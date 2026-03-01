@@ -180,10 +180,8 @@ class DialogWrapper implements Dialog {
         'click',
         e => {
           this.close('cancel');
-          if (e instanceof MouseEvent) {
-            // If closed with a primary click, blur the element that was used to open the dialog before:
-            blurIfPrimaryClick(e);
-          }
+          // If closed with a primary click, blur the element that was used to open the dialog before
+          blurIfPrimaryClick(e);
         },
       );
 
