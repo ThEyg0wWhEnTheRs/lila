@@ -18,8 +18,10 @@ export const timeago: (d: DateLike) => string = (date: DateLike) =>
   formatAgo((Date.now() - toDate(date).getTime()) / 1000);
 
 // format Date / string / timestamp to Date instance.
-export const toDate = (input: DateLike): Date =>
-  input instanceof Date ? input : new Date(isNaN(input as any) ? input : parseInt(input as any));
+export const toDate = (input: DateLike): Date => {
+  if (input instanceof Date) return input;
+  return new Date(isNaN(input as any) ? input : parseInt(input as any));
+};
 
 export const use24h = (): boolean => !commonDateFormatter.resolvedOptions().hour12;
 
