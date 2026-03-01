@@ -33,6 +33,7 @@ describe('roundToCurrency', async () => {
 });
 
 describe('dateParsing', async () => {
+  process.env.TZ = 'UTC';
   document.documentElement.lang = 'en-US';
   const { toDate } = await import('../../lib/src/i18n');
 
@@ -61,7 +62,7 @@ describe('dateParsing', async () => {
   });
 
   await test('date', () => {
-    assert.strictEqual(toDate(new Date('2/1/22')).toISOString(), '2022-01-31T23:00:00.000Z');
+    assert.strictEqual(toDate(new Date('2/1/22')).toISOString(), '2022-02-01T00:00:00.000Z');
   });
 
   await test('invalid date: random string', () => {
