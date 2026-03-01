@@ -20,8 +20,6 @@ final private class TutorBuilder(
     perfStatsApi: InsightPerfStatsApi,
     userApi: lila.core.user.UserApi,
     fishnet: TutorFishnet,
-    messenger: lila.core.msg.MsgApi,
-    routeUrl: lila.core.config.RouteUrl,
     notifyApi: lila.core.notify.NotifyApi
 )(using Executor, Scheduler):
 

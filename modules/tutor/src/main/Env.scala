@@ -21,8 +21,6 @@ final class Env(
     settingStore: lila.memo.SettingStore.Builder,
     cacheApi: CacheApi,
     lightUserApi: lila.core.user.LightUserApi,
-    msgApi: lila.core.msg.MsgApi,
-    routeUrl: config.RouteUrl,
     notifyApi: lila.core.notify.NotifyApi
 )(using Executor, Scheduler, play.api.Mode, config.RateLimit):
 
