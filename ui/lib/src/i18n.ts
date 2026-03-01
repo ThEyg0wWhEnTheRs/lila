@@ -20,6 +20,7 @@ export const timeago: (d: DateLike) => string = (date: DateLike) =>
 // format Date / string / timestamp to Date instance.
 export const toDate = (input: DateLike): Date => {
   if (input instanceof Date) return input;
+  else if (typeof input === 'string') return new Date(/^\d+$/.test(input) ? parseInt(input, 10) : input);
   return new Date(input);
 };
 

@@ -46,8 +46,11 @@ describe('dateParsing', async () => {
   });
 
   await test('string: utc', () => {
-    const date = 'Tue, 17 April 2024 23:50:21 GMT';
-    assert.strictEqual(toDate(date).toISOString(), '2024-04-17T23:50:21.000Z');
+    assert.strictEqual(toDate('Tue, 17 April 2024 23:50:21 GMT').toISOString(), '2024-04-17T23:50:21.000Z');
+  });
+
+  await test('string: epoch timestamp', () => {
+    assert.strictEqual(toDate('1772357604952').toISOString(), '2026-03-01T09:33:24.952Z');
   });
 
   await test('string: date toString', () => {
