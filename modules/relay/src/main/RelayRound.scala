@@ -1,5 +1,6 @@
 package lila.relay
 
+import java.time.temporal.ChronoUnit
 import play.api.mvc.Call
 import io.mola.galimatias.URL
 import reactivemongo.api.bson.Macros.Annotations.Key
@@ -71,9 +72,11 @@ case class RelayRound(
       case Some(at) => at.isBefore(nowInstant.minusHours(3))
       case None => createdAt.isBefore(nowInstant.minusDays(1))
 
-  def daysSinceFinished =
-    import java.time.temporal.ChronoUnit
-    finishedAt.map(ChronoUnit.DAYS.between(_, nowInstant))
+  def daysSinceFinished = finishedAt.map(ChronoUnit.DAYS.between(_, nowInstant))
+
+  private[relay] def startsSoonOrAfterPrevious = startsAt.exists:
+    case RelayRound.Starts.At(at) => ChronoUnit.DAYS.between(nowInstant, at) <= 3
+    case RelayRound.Starts.AfterPrevious => true
 
   def withSync(f: Update[RelayRound.Sync]) = copy(sync = f(sync))
 
