@@ -20,8 +20,7 @@ export const timeago: (d: DateLike) => string = (date: DateLike) =>
 // format Date / string / timestamp to Date instance.
 export const toDate = (input: DateLike): Date => {
   if (input instanceof Date) return input;
-  if (typeof input === 'string') return new Date(Number.isNaN(input) ? input : parseInt(input));
-  else return new Date(input);
+  return new Date(isNaN(input as any) ? input : parseInt(input as any));
 };
 
 export const use24h = (): boolean => !commonDateFormatter.resolvedOptions().hour12;
